@@ -194,9 +194,11 @@ func TestParse(t *testing.T) {
   
   fmt.Println("-----> %v", x)
   
-  err = x.exec(r, nil)
+  y, err := x.exec(r, nil)
   if err != nil {
     t.Error(err)
+  }else{
+    fmt.Println("-----> %v", y)
   }
   
 }

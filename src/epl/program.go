@@ -46,7 +46,7 @@ type runtime struct {
  * Executable
  */
 type executable interface {
-  exec(*runtime, interface{}) error
+  exec(*runtime, interface{})([]interface{}, error)
 }
 
 /**
@@ -64,36 +64,16 @@ type node struct {
 }
 
 /**
- * Add a node to this node's subnodes
- */
-func (n *node) add(c executable) *node {
-  if n.subnodes == nil {
-    n.subnodes = []executable{c}
-  }else{
-    n.subnodes = append(n.subnodes, c)
-  }
-  return n
-}
-
-/**
  * Execute
  */
-func (n *node) exec(runtime *runtime, context interface{}) error {
-  if n.subnodes == nil {
-    return fmt.Errorf("Empty node")
-  }
-  for _, s := range n.subnodes {
-    if err := s.exec(runtime, context); err != nil {
-      return err
-    }
-  }
-  return nil
+func (n *node) exec(runtime *runtime, context interface{}) ([]interface{}, error) {
+  return nil, fmt.Errorf("No implementation")
 }
 
 /**
  * A program
  */
-type program struct {
+type emptyNode struct {
   node
 }
 
@@ -109,6 +89,24 @@ type exprNode struct {
  */
 type arithmeticNode struct {
   node
-  left, operator, right token
+  op          token
+  left, right float64
 }
 
+/**
+ * Execute
+ */
+func (n *arithmeticNode) exec(runtime *runtime, context interface{}) ([]interface{}, error) {
+  switch n.op.which {
+    case tokenAdd:
+      return []interface{}{ n.left + n.right }, nil
+    case tokenSub:
+      return []interface{}{ n.left - n.right }, nil
+    case tokenMul:
+      return []interface{}{ n.left * n.right }, nil
+    case tokenDiv:
+      return []interface{}{ n.left / n.right }, nil
+    default:
+      return nil, fmt.Errorf("Invalid operator: %v", n.op)
+  }
+}

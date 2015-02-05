@@ -89,61 +89,47 @@ func (p *parser) next() token {
 /**
  * Parse
  */
-func (p *parser) parse() (*program, error) {
-  prog := &program{}
-  
-  for {
-    t := p.next()
-    switch t.which {
-      
-      case tokenEOF:
-        return prog, nil
-        
-      case tokenError:
-        return nil, fmt.Errorf("Error: %v", t)
-        
-      default:
-        if n, err := p.parseExpression(prog, t); err != nil {
-          return nil, err
-        }else{
-          prog.add(n)
-        }
-        
-    }
+func (p *parser) parse() (executable, error) {
+  t := p.next()
+  switch t.which {
+    case tokenEOF:
+      return &emptyNode{}, nil
+    case tokenError:
+      return nil, fmt.Errorf("Error: %v", t)
+    default:
+      if n, err := p.parseExpression(t); err != nil {
+        return nil, err
+      }else{
+        return n, nil
+      }
   }
-  
 }
 
 /**
  * Parse
  */
-func (p *parser) parseExpression(parent tree, left token) (executable, error) {
+func (p *parser) parseExpression(left token) (executable, error) {
   t := p.next()
   switch t.which {
-    
     case tokenEOF:
       return nil, fmt.Errorf("Unexpected end-of-input", t)
-      
     case tokenError:
       return nil, fmt.Errorf("Error: %v", t)
-      
     case tokenAdd, tokenSub, tokenMul, tokenDiv:
-      if n, err := p.parseArithmetic(parent, left, t); err != nil {
+      if n, err := p.parseArithmetic(left, t); err != nil {
         return nil, err
       }else{
         return n, nil
       }
-      
     default:
       return nil, fmt.Errorf("Illegal token in expression: %v", t)
-      
   }
 }
 
 /**
  * Parse an arithmetic expression
  */
-func (p *parser) parseArithmetic(parent tree, left, op token) (executable, error) {
+func (p *parser) parseArithmetic(left, op token) (executable, error) {
   t := p.next()
   switch t.which {
     case tokenEOF:
@@ -151,7 +137,7 @@ func (p *parser) parseArithmetic(parent tree, left, op token) (executable, error
     case tokenError:
       return nil, fmt.Errorf("Error: %v", t)
     case tokenNumber:
-      return &arithmeticNode{node{}, left, op, t}, nil
+      return &arithmeticNode{node{}, op, left.value.(float64), t.value.(float64)}, nil
     default:
       return nil, fmt.Errorf("Illegal token in arithmetic expression: %v", t)
   }
