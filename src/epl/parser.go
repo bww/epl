@@ -93,15 +93,11 @@ func (p *parser) parse() (executable, error) {
   t := p.next()
   switch t.which {
     case tokenEOF:
-      return &emptyNode{}, nil
+      return &emptyNode{}, nil // no content
     case tokenError:
       return nil, fmt.Errorf("Error: %v", t)
     default:
-      if n, err := p.parseExpression(t); err != nil {
-        return nil, err
-      }else{
-        return n, nil
-      }
+      return p.parseExpression(t)
   }
 }
 
@@ -112,15 +108,11 @@ func (p *parser) parseExpression(left token) (executable, error) {
   t := p.next()
   switch t.which {
     case tokenEOF:
-      return nil, fmt.Errorf("Unexpected end-of-input", t)
+      return p.parsePrimary(left)
     case tokenError:
       return nil, fmt.Errorf("Error: %v", t)
     case tokenAdd, tokenSub, tokenMul, tokenDiv:
-      if n, err := p.parseArithmetic(left, t); err != nil {
-        return nil, err
-      }else{
-        return n, nil
-      }
+      return p.parseArithmetic(left, t)
     default:
       return nil, fmt.Errorf("Illegal token in expression: %v", t)
   }
@@ -138,6 +130,30 @@ func (p *parser) parseArithmetic(left, op token) (executable, error) {
       return nil, fmt.Errorf("Error: %v", t)
     case tokenNumber:
       return &arithmeticNode{node{}, op, left.value.(float64), t.value.(float64)}, nil
+    default:
+      return nil, fmt.Errorf("Illegal token in arithmetic expression: %v", t)
+  }
+}
+
+/**
+ * Parse a primary expression
+ */
+func (p *parser) parsePrimary(t token) (executable, error) {
+  switch t.which {
+    case tokenEOF:
+      return nil, fmt.Errorf("Unexpected end-of-input", t)
+    case tokenError:
+      return nil, fmt.Errorf("Error: %v", t)
+    case tokenIdentifier:
+      return &identNode{node{}, t.value.(string)}, nil
+    case tokenNumber, tokenString:
+      return &literalNode{node{}, t.value}, nil
+    case tokenTrue:
+      return &literalNode{node{}, true}, nil
+    case tokenFalse:
+      return &literalNode{node{}, false}, nil
+    case tokenNil:
+      return &literalNode{node{}, nil}, nil
     default:
       return nil, fmt.Errorf("Illegal token in arithmetic expression: %v", t)
   }

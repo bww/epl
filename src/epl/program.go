@@ -110,3 +110,34 @@ func (n *arithmeticNode) exec(runtime *runtime, context interface{}) ([]interfac
       return nil, fmt.Errorf("Invalid operator: %v", n.op)
   }
 }
+
+/**
+ * An identifier expression node
+ */
+type identNode struct {
+  node
+  ident string
+}
+
+/**
+ * Execute
+ */
+func (n *identNode) exec(runtime *runtime, context interface{}) ([]interface{}, error) {
+  return []interface{}{n.ident}, nil
+}
+
+/**
+ * A literal expression node
+ */
+type literalNode struct {
+  node
+  value interface{}
+}
+
+/**
+ * Execute
+ */
+func (n *literalNode) exec(runtime *runtime, context interface{}) ([]interface{}, error) {
+  return []interface{}{n.value}, nil
+}
+

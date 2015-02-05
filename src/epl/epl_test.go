@@ -179,9 +179,15 @@ func compileAndValidate(test *testing.T, source string, expect []token) {
 }
 
 func TestParse(t *testing.T) {
-  var source string
-  
-  source = `1+2`
+  parseAndRun(t, `1+2`)
+  parseAndRun(t, `1`)
+  parseAndRun(t, `"Yes" + 2`)
+  parseAndRun(t, `true`)
+  parseAndRun(t, `false`)
+  parseAndRun(t, `nil`)
+}
+
+func parseAndRun(t *testing.T, source string) {
   
   s := newScanner(source)
   p := newParser(s)
@@ -202,5 +208,3 @@ func TestParse(t *testing.T) {
   }
   
 }
-
-
