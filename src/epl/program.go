@@ -32,7 +32,7 @@ package epl
 
 import (
   "io"
-  _"fmt"
+  "fmt"
 )
 
 /**
@@ -50,11 +50,16 @@ type executable interface {
 }
 
 /**
+ * Executable
+ */
+type tree interface {
+  add(c executable) *node
+}
+
+/**
  * An AST node
  */
 type node struct {
-  span      span
-  token     *token
   subnodes  []executable
 }
 
@@ -62,7 +67,11 @@ type node struct {
  * Add a node to this node's subnodes
  */
 func (n *node) add(c executable) *node {
-  n.subnodes = append(n.subnodes, c)
+  if n.subnodes == nil {
+    n.subnodes = []executable{c}
+  }else{
+    n.subnodes = append(n.subnodes, c)
+  }
   return n
 }
 
@@ -70,6 +79,9 @@ func (n *node) add(c executable) *node {
  * Execute
  */
 func (n *node) exec(runtime *runtime, context interface{}) error {
+  if n.subnodes == nil {
+    return fmt.Errorf("Empty node")
+  }
   for _, s := range n.subnodes {
     if err := s.exec(runtime, context); err != nil {
       return err
@@ -86,42 +98,17 @@ type program struct {
 }
 
 /**
- * A verbatim node
- */
-type verbatimNode struct {
-  node
-}
-
-/**
- * Execute
- */
-func (n *verbatimNode) exec(runtime *runtime, context interface{}) error {
-  if err := n.node.exec(runtime, context); err != nil {
-    return err
-  }else if _, err := runtime.stdout.Write([]byte(n.span.excerpt())); err != nil {
-    return err
-  }
-  return nil
-}
-
-/**
- * A meta node
- */
-type metaNode struct {
-  node
-}
-
-/**
- * An if node
- */
-type ifNode struct {
-  node
-}
-
-/**
  * An expression node
  */
 type exprNode struct {
   node
+}
+
+/**
+ * An arithmetic expression node
+ */
+type arithmeticNode struct {
+  node
+  left, operator, right token
 }
 

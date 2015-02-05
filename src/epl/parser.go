@@ -39,14 +39,14 @@ import (
  */
 type parser struct {
   scanner   *scanner
-  la        [2]token
+  la        []token
 }
 
 /**
  * Create a parser
  */
 func newParser(s *scanner) *parser {
-  return &parser{scanner:s}
+  return &parser{s, make([]token, 0, 2)}
 }
 
 /**
@@ -55,13 +55,15 @@ func newParser(s *scanner) *parser {
 func (p *parser) peek(n int) token {
   var t token
   
-  if n < len(p.la) {
+  l := len(p.la)
+  if n < l {
     return p.la[n]
   }else if n >= cap(p.la) {
     panic("Look-ahead overrun")
   }
   
-  for i := len(p.la); i < n; i++ {
+  p.la = p.la[:l+n]
+  for i := l; i < n; i++ {
     t = p.scanner.scan()
     p.la[i] = t
   }
@@ -73,11 +75,13 @@ func (p *parser) peek(n int) token {
  * Consume the next token
  */
 func (p *parser) next() token {
-  if len(p.la) < 1 {
+  l := len(p.la)
+  if l < 1 {
     return p.scanner.scan()
   }else{
     t := p.la[0]
-    for i := 1; i < len(p.la); i++ { p.la[i-1] = p.la[i] }
+    for i := 1; i < l; i++ { p.la[i-1] = p.la[i] }
+    p.la = p.la[:l-1]
     return t
   }
 }
@@ -98,18 +102,12 @@ func (p *parser) parse() (*program, error) {
       case tokenError:
         return nil, fmt.Errorf("Error: %v", t)
         
-      // case tokenVerbatim:
-      //   prog.add(&verbatimNode{node{t.span, &t, nil}})
-        
-      // case tokenMeta:
-      //   if n, err := p.parseMeta(); err != nil {
-      //     return nil, err
-      //   }else{
-      //     prog.add(n)
-      //   }
-        
       default:
-        return nil, fmt.Errorf("Unsupported token: %v", t)
+        if n, err := p.parseExpression(prog, t); err != nil {
+          return nil, err
+        }else{
+          prog.add(n)
+        }
         
     }
   }
@@ -119,65 +117,42 @@ func (p *parser) parse() (*program, error) {
 /**
  * Parse
  */
-// func (p *parser) parseMeta() (*node, error) {
-//   out := &metaNode{}
-//   t := p.next()
-//   switch t.which {
+func (p *parser) parseExpression(parent tree, left token) (executable, error) {
+  t := p.next()
+  switch t.which {
     
-//     case tokenIf:
-//       if n, err := p.parseIf(); err != nil {
-//         return nil, err
-//       }else{
-//         return out.add(n), nil
-//       }
+    case tokenEOF:
+      return nil, fmt.Errorf("Unexpected end-of-input", t)
       
-//     case tokenFor:
-//       if n, err := p.parseFor(); err != nil {
-//         return nil, err
-//       }else{
-//         return out.add(n), nil
-//       }
+    case tokenError:
+      return nil, fmt.Errorf("Error: %v", t)
       
-//     default:
-//       return nil, fmt.Errorf("Illegal token in meta: %v", t)
+    case tokenAdd, tokenSub, tokenMul, tokenDiv:
+      if n, err := p.parseArithmetic(parent, left, t); err != nil {
+        return nil, err
+      }else{
+        return n, nil
+      }
       
-//   }
-// }
-
-// /**
-//  * Parse
-//  */
-// func (p *parser) parseIf() (*node, error) {
-//   out := &ifNode{}
-//   if n, err := p.parseExpression(); err != nil {
-//     return nil, err
-//   }else{
-//     return out.add(n), nil
-//   }
-// }
-
-// /**
-//  * Parse
-//  */
-// func (p *parser) parseFor() (*node, error) {
-//   return nil, nil
-// }
-
-/**
- * Parse
- */
-func (p *parser) parseExpression() (*node, error) {
-  out := &exprNode{}
-  //t0 := p.peek(0)
-  t1 := p.peek(1)
-  
-  switch t1.which {
-    case tokenBlock: // end of meta
     default:
-      return nil, fmt.Errorf("Illegal token in expression: %v", t1)
+      return nil, fmt.Errorf("Illegal token in expression: %v", t)
+      
   }
-  
-  return out.add(nil), nil
 }
 
-
+/**
+ * Parse an arithmetic expression
+ */
+func (p *parser) parseArithmetic(parent tree, left, op token) (executable, error) {
+  t := p.next()
+  switch t.which {
+    case tokenEOF:
+      return nil, fmt.Errorf("Unexpected end-of-input", t)
+    case tokenError:
+      return nil, fmt.Errorf("Error: %v", t)
+    case tokenNumber:
+      return &arithmeticNode{node{}, left, op, t}, nil
+    default:
+      return nil, fmt.Errorf("Illegal token in arithmetic expression: %v", t)
+  }
+}

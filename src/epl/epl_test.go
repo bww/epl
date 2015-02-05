@@ -181,15 +181,21 @@ func compileAndValidate(test *testing.T, source string, expect []token) {
 func TestParse(t *testing.T) {
   var source string
   
-  source = `1`
+  source = `1+2`
   
   s := newScanner(source)
   p := newParser(s)
   r := &runtime{os.Stdout}
   
-  if p, err := p.parse(); err != nil {
+  x, err := p.parse()
+  if err != nil {
     t.Error(err)
-  }else if err := p.exec(r, nil); err != nil {
+  }
+  
+  fmt.Println("-----> %v", x)
+  
+  err = x.exec(r, nil)
+  if err != nil {
     t.Error(err)
   }
   
