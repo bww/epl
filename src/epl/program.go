@@ -209,6 +209,57 @@ func (n *arithmeticNode) exec(runtime *runtime, context interface{}) ([]interfac
 }
 
 /**
+ * An relational expression node
+ */
+type relationalNode struct {
+  node
+  op          token
+  left, right executable
+}
+
+/**
+ * Execute
+ */
+func (n *relationalNode) exec(runtime *runtime, context interface{}) ([]interface{}, error) {
+  
+  lvi, err := execReturnSingle(n.left, runtime, context)
+  if err != nil {
+    return nil, err
+  }
+  lv, err := asNumber(lvi)
+  if err != nil {
+    return nil, err
+  }
+  
+  rvi, err := execReturnSingle(n.right, runtime, context)
+  if err != nil {
+    return nil, err
+  }
+  rv, err := asNumber(rvi)
+  if err != nil {
+    return nil, err
+  }
+  
+  switch n.op.which {
+    case tokenLess:
+      return []interface{}{ lv < rv }, nil
+    case tokenGreater:
+      return []interface{}{ lv > rv }, nil
+    case tokenEqual:
+      return []interface{}{ lv == rv }, nil
+    case tokenLessEqual:
+      return []interface{}{ lv <= rv }, nil
+    case tokenGreaterEqual:
+      return []interface{}{ lv >= rv }, nil
+    case tokenNotEqual:
+      return []interface{}{ lv != rv }, nil
+    default:
+      return nil, fmt.Errorf("Invalid operator: %v", n.op)
+  }
+  
+}
+
+/**
  * An identifier expression node
  */
 type identNode struct {

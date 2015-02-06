@@ -191,6 +191,11 @@ func TestParse(t *testing.T) {
   parseAndRun(t, `nil`, nil)
   parseAndRun(t, `hi`, nil)
   parseAndRun(t, `hi+3`, nil)
+  parseAndRun(t, `hi == 3`, nil)
+  parseAndRun(t, `hi > 3`, nil)
+  parseAndRun(t, `hi < 4 || 1 + 2 < 5`, nil)
+  parseAndRun(t, `"foo" > 3`, nil)
+  parseAndRun(t, `"foo" > "f"`, nil)
 }
 
 func parseAndRun(t *testing.T, source string, result interface{}) {

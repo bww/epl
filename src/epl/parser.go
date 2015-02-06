@@ -135,7 +135,7 @@ func (p *parser) parseLogicalOr() (executable, error) {
  */
 func (p *parser) parseLogicalAnd() (executable, error) {
   
-  left, err := p.parseArithmetic()
+  left, err := p.parseRelational()
   if err != nil {
     return nil, err
   }
@@ -157,6 +157,35 @@ func (p *parser) parseLogicalAnd() (executable, error) {
   }
   
   return &logicalAndNode{node{}, left, right}, nil
+}
+
+/**
+ * Parse a relational expression
+ */
+func (p *parser) parseRelational() (executable, error) {
+  
+  left, err := p.parseArithmetic()
+  if err != nil {
+    return nil, err
+  }
+  
+  op := p.peek(0)
+  switch op.which {
+    case tokenError:
+      return nil, fmt.Errorf("Error: %v", op)
+    case tokenLess, tokenGreater, tokenEqual, tokenLessEqual, tokenGreaterEqual, tokenNotEqual:
+      break // valid tokens
+    default:
+      return left, nil
+  }
+  
+  p.next() // consume the operator
+  right, err := p.parseRelational()
+  if err != nil {
+    return nil, err
+  }
+  
+  return &relationalNode{node{}, op, left, right}, nil
 }
 
 /**
