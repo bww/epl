@@ -33,6 +33,7 @@ package epl
 import (
   "io"
   "fmt"
+  "reflect"
 )
 
 /**
@@ -82,6 +83,82 @@ type emptyNode struct {
  */
 type exprNode struct {
   node
+}
+
+/**
+ * A logical OR node
+ */
+type logicalOrNode struct {
+  node
+  left, right executable
+}
+
+/**
+ * Execute
+ */
+func (n *logicalOrNode) exec(runtime *runtime, context interface{}) ([]interface{}, error) {
+  
+  lvi, err := execReturnSingle(n.left, runtime, context)
+  if err != nil {
+    return nil, err
+  }
+  lv, err := asBool(lvi)
+  if err != nil {
+    return nil, err
+  }
+  
+  if lv {
+    return []interface{}{true}, nil
+  }
+  
+  rvi, err := execReturnSingle(n.right, runtime, context)
+  if err != nil {
+    return nil, err
+  }
+  rv, err := asBool(rvi)
+  if err != nil {
+    return nil, err
+  }
+  
+  return []interface{}{rv}, nil
+}
+
+/**
+ * A logical AND node
+ */
+type logicalAndNode struct {
+  node
+  left, right executable
+}
+
+/**
+ * Execute
+ */
+func (n *logicalAndNode) exec(runtime *runtime, context interface{}) ([]interface{}, error) {
+  
+  lvi, err := execReturnSingle(n.left, runtime, context)
+  if err != nil {
+    return nil, err
+  }
+  lv, err := asBool(lvi)
+  if err != nil {
+    return nil, err
+  }
+  
+  if !lv {
+    return []interface{}{false}, nil
+  }
+  
+  rvi, err := execReturnSingle(n.right, runtime, context)
+  if err != nil {
+    return nil, err
+  }
+  rv, err := asBool(rvi)
+  if err != nil {
+    return nil, err
+  }
+  
+  return []interface{}{rv}, nil
 }
 
 /**
@@ -143,7 +220,38 @@ type identNode struct {
  * Execute
  */
 func (n *identNode) exec(runtime *runtime, context interface{}) ([]interface{}, error) {
-  return []interface{}{n.ident}, nil
+  switch v := context.(type) {
+    case map[string]interface{}:
+      return []interface{}{v[n.ident]}, nil
+    default:
+      return derefProp(context, n.ident)
+  }
+}
+
+/**
+ * Execute
+ */
+func derefProp(context interface{}, property string) ([]interface{}, error) {
+  c, _ := derefValue(reflect.ValueOf(context))
+  switch c.Kind() {
+    case reflect.Struct:
+      return []interface{}{c.FieldByName(property)}, nil
+    default:
+      return nil, fmt.Errorf("Cannot dereference context: %v (%T)", context, context)
+  }
+}
+
+/**
+ * Dereference a value
+ */
+func derefValue(value reflect.Value) (reflect.Value, int) {
+  v := value
+  c := 0
+  for ; v.Kind() == reflect.Ptr; {
+    v = v.Elem()
+    c++
+  }
+  return v, c
 }
 
 /**
@@ -177,10 +285,40 @@ func execReturnSingle(e executable, runtime *runtime, context interface{}) (inte
 }
 
 /**
+ * Obtain an interface value as a bool
+ */
+func asBool(value interface{}) (bool, error) {
+  switch v := value.(type) {
+    case bool:
+      return v, nil
+    case uint8:
+      return v != 0, nil
+    case uint16:
+      return v != 0, nil
+    case uint32:
+      return v != 0, nil
+    case uint64:
+      return v != 0, nil
+    case int8:
+      return v != 0, nil
+    case int16:
+      return v != 0, nil
+    case int32:
+      return v != 0, nil
+    case int64:
+      return v != 0, nil
+    default:
+      return false, fmt.Errorf("Cannot cast %v (%T) to bool", value, value)
+  }
+}
+
+/**
  * Obtain an interface value as a number
  */
 func asNumber(value interface{}) (float64, error) {
   switch v := value.(type) {
+    case int:
+      return float64(v), nil
     case uint8:
       return float64(v), nil
     case uint16:
@@ -202,6 +340,6 @@ func asNumber(value interface{}) (float64, error) {
     case float64:
       return v, nil
     default:
-      return 0, fmt.Errorf("Cannot cast %T to numeric", value)
+      return 0, fmt.Errorf("Cannot cast %v (%T) to numeric", value, value)
   }
 }

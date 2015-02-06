@@ -98,28 +98,65 @@ func (p *parser) parse() (executable, error) {
  * Parse
  */
 func (p *parser) parseExpression() (executable, error) {
-  return p.parseArithmetic()
-  /*
-  left := p.peek(0)
-  switch left.which {
-    case tokenEOF:
-      return p.parsePrimary()
-    case tokenError:
-      return nil, fmt.Errorf("Error: %v", left)
+  return p.parseLogicalOr()
+}
+
+/**
+ * Parse a logical or
+ */
+func (p *parser) parseLogicalOr() (executable, error) {
+  
+  left, err := p.parseLogicalAnd()
+  if err != nil {
+    return nil, err
   }
   
-  op := p.peek(1)
+  op := p.peek(0)
   switch op.which {
-    case tokenEOF:
-      return nil, fmt.Errorf("Unexpected end-of-input")
     case tokenError:
       return nil, fmt.Errorf("Error: %v", op)
-    case tokenAdd, tokenSub, tokenMul, tokenDiv:
-      return p.parseArithmetic()
+    case tokenLogicalOr:
+      break // valid token
     default:
-      return nil, fmt.Errorf("Illegal token in expression: %v", op)
+      return left, nil
   }
-  */
+  
+  p.next() // consume the operator
+  right, err := p.parseLogicalOr()
+  if err != nil {
+    return nil, err
+  }
+  
+  return &logicalOrNode{node{}, left, right}, nil
+}
+
+/**
+ * Parse a logical and
+ */
+func (p *parser) parseLogicalAnd() (executable, error) {
+  
+  left, err := p.parseArithmetic()
+  if err != nil {
+    return nil, err
+  }
+  
+  op := p.peek(0)
+  switch op.which {
+    case tokenError:
+      return nil, fmt.Errorf("Error: %v", op)
+    case tokenLogicalAnd:
+      break // valid token
+    default:
+      return left, nil
+  }
+  
+  p.next() // consume the operator
+  right, err := p.parseLogicalAnd()
+  if err != nil {
+    return nil, err
+  }
+  
+  return &logicalAndNode{node{}, left, right}, nil
 }
 
 /**
@@ -142,7 +179,7 @@ func (p *parser) parseArithmetic() (executable, error) {
       return left, nil
   }
   
-  p.next()
+  p.next() // consume the operator
   right, err := p.parseArithmetic()
   if err != nil {
     return nil, err

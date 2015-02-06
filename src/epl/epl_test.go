@@ -179,16 +179,21 @@ func compileAndValidate(test *testing.T, source string, expect []token) {
 }
 
 func TestParse(t *testing.T) {
-  parseAndRun(t, `1+2`)
-  parseAndRun(t, `1 && 2`)
-  parseAndRun(t, `"Yes" + 2`)
-  parseAndRun(t, `1 - 2 + (2 * 3)`)
-  parseAndRun(t, `true`)
-  parseAndRun(t, `false`)
-  parseAndRun(t, `nil`)
+  parseAndRun(t, `1+2`, 3)
+  parseAndRun(t, `1 && 2`, true)
+  parseAndRun(t, `true && true`, true)
+  parseAndRun(t, `true && false`, true)
+  parseAndRun(t, `false && false`, true)
+  parseAndRun(t, `"Yes" + 2`, nil)
+  parseAndRun(t, `1 - 2 + (2 * 3)`, -7)
+  parseAndRun(t, `true`, true)
+  parseAndRun(t, `false`, false)
+  parseAndRun(t, `nil`, nil)
+  parseAndRun(t, `hi`, nil)
+  parseAndRun(t, `hi+3`, nil)
 }
 
-func parseAndRun(t *testing.T, source string) {
+func parseAndRun(t *testing.T, source string, result interface{}) {
   
   s := newScanner(source)
   p := newParser(s)
@@ -202,13 +207,19 @@ func parseAndRun(t *testing.T, source string) {
     return
   }
   
-  fmt.Printf("B> [%v] %v\n", source, x)
+  fmt.Printf("B> %v\n", x)
   
-  y, err := x.exec(r, nil)
+  y, err := x.exec(r, map[string]interface{}{"hi": 123})
   if err != nil {
     t.Error(err)
-  }else{
-    fmt.Printf("Z> %v\n", y)
+    return
+  }
+  
+  fmt.Printf("Z> %v\n", y)
+  
+  if y == nil || len(y) != 1 || y[0] != result {
+    t.Error(fmt.Errorf("Expected %v, got %v", result, y[0]))
+    return
   }
   
 }
