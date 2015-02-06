@@ -37,6 +37,18 @@ import (
 )
 
 /**
+ * A runtime context
+ */
+type Context interface {
+  Variable(name string)(interface{}, error)
+}
+
+/**
+ * A variable provider
+ */
+type VariableProvider func(name string)(interface{}, error)
+
+/**
  * Executable context
  */
 type runtime struct {
@@ -226,12 +238,19 @@ func (n *relationalNode) exec(runtime *runtime, context interface{}) ([]interfac
   if err != nil {
     return nil, err
   }
-  lv, err := asNumber(lvi)
+  rvi, err := execReturnSingle(n.right, runtime, context)
   if err != nil {
     return nil, err
   }
   
-  rvi, err := execReturnSingle(n.right, runtime, context)
+  switch n.op.which {
+    case tokenEqual:
+      return []interface{}{ lvi == rvi }, nil
+    case tokenNotEqual:
+      return []interface{}{ lvi != rvi }, nil
+  }
+  
+  lv, err := asNumber(lvi)
   if err != nil {
     return nil, err
   }
@@ -245,14 +264,10 @@ func (n *relationalNode) exec(runtime *runtime, context interface{}) ([]interfac
       return []interface{}{ lv < rv }, nil
     case tokenGreater:
       return []interface{}{ lv > rv }, nil
-    case tokenEqual:
-      return []interface{}{ lv == rv }, nil
     case tokenLessEqual:
       return []interface{}{ lv <= rv }, nil
     case tokenGreaterEqual:
       return []interface{}{ lv >= rv }, nil
-    case tokenNotEqual:
-      return []interface{}{ lv != rv }, nil
     default:
       return nil, fmt.Errorf("Invalid operator: %v", n.op)
   }
@@ -272,10 +287,29 @@ type identNode struct {
  */
 func (n *identNode) exec(runtime *runtime, context interface{}) ([]interface{}, error) {
   switch v := context.(type) {
+    
+    case Context:
+      r, err := v.Variable(n.ident)
+      if err != nil {
+        return nil, err
+      }else{
+        return []interface{}{r}, nil
+      }
+      
+    case VariableProvider:
+      r, err := v(n.ident)
+      if err != nil {
+        return nil, err
+      }else{
+        return []interface{}{r}, nil
+      }
+      
     case map[string]interface{}:
       return []interface{}{v[n.ident]}, nil
+      
     default:
       return derefProp(context, n.ident)
+      
   }
 }
 
