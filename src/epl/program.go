@@ -90,25 +90,45 @@ type exprNode struct {
 type arithmeticNode struct {
   node
   op          token
-  left, right float64
+  left, right executable
 }
 
 /**
  * Execute
  */
 func (n *arithmeticNode) exec(runtime *runtime, context interface{}) ([]interface{}, error) {
+  
+  lvi, err := execReturnSingle(n.left, runtime, context)
+  if err != nil {
+    return nil, err
+  }
+  lv, err := asNumber(lvi)
+  if err != nil {
+    return nil, err
+  }
+  
+  rvi, err := execReturnSingle(n.right, runtime, context)
+  if err != nil {
+    return nil, err
+  }
+  rv, err := asNumber(rvi)
+  if err != nil {
+    return nil, err
+  }
+  
   switch n.op.which {
     case tokenAdd:
-      return []interface{}{ n.left + n.right }, nil
+      return []interface{}{ lv + rv }, nil
     case tokenSub:
-      return []interface{}{ n.left - n.right }, nil
+      return []interface{}{ lv - rv }, nil
     case tokenMul:
-      return []interface{}{ n.left * n.right }, nil
+      return []interface{}{ lv * rv }, nil
     case tokenDiv:
-      return []interface{}{ n.left / n.right }, nil
+      return []interface{}{ lv / rv }, nil
     default:
       return nil, fmt.Errorf("Invalid operator: %v", n.op)
   }
+  
 }
 
 /**
@@ -141,3 +161,47 @@ func (n *literalNode) exec(runtime *runtime, context interface{}) ([]interface{}
   return []interface{}{n.value}, nil
 }
 
+/**
+ * Execute expecting a single return value
+ */
+func execReturnSingle(e executable, runtime *runtime, context interface{}) (interface{}, error) {
+  rva, err := e.exec(runtime, context)
+  if err != nil {
+    return nil, err
+  }
+  if len(rva) != 1 {
+    return nil, fmt.Errorf("Expected single return value, got %d", len(rva))
+  }else{
+    return rva[0], nil
+  }
+}
+
+/**
+ * Obtain an interface value as a number
+ */
+func asNumber(value interface{}) (float64, error) {
+  switch v := value.(type) {
+    case uint8:
+      return float64(v), nil
+    case uint16:
+      return float64(v), nil
+    case uint32:
+      return float64(v), nil
+    case uint64:
+      return float64(v), nil
+    case int8:
+      return float64(v), nil
+    case int16:
+      return float64(v), nil
+    case int32:
+      return float64(v), nil
+    case int64:
+      return float64(v), nil
+    case float32:
+      return float64(v), nil
+    case float64:
+      return v, nil
+    default:
+      return 0, fmt.Errorf("Cannot cast %T to numeric", value)
+  }
+}

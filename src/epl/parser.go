@@ -40,13 +40,14 @@ import (
 type parser struct {
   scanner   *scanner
   la        []token
+  nodes     []executable
 }
 
 /**
  * Create a parser
  */
 func newParser(s *scanner) *parser {
-  return &parser{s, make([]token, 0, 2)}
+  return &parser{s, make([]token, 0, 2), make([]executable, 0, 3)}
 }
 
 /**
@@ -58,12 +59,12 @@ func (p *parser) peek(n int) token {
   l := len(p.la)
   if n < l {
     return p.la[n]
-  }else if n >= cap(p.la) {
-    panic("Look-ahead overrun")
+  }else if n + 1 > cap(p.la) {
+    panic(fmt.Errorf("Look-ahead overrun: %d >= %d", n + 1, cap(p.la)))
   }
   
-  p.la = p.la[:l+n]
-  for i := l; i < n; i++ {
+  p.la = p.la[:n+1]
+  for i := l; i < n + 1; i++ {
     t = p.scanner.scan()
     p.la[i] = t
   }
@@ -90,60 +91,78 @@ func (p *parser) next() token {
  * Parse
  */
 func (p *parser) parse() (executable, error) {
-  t := p.next()
-  switch t.which {
-    case tokenEOF:
-      return &emptyNode{}, nil // no content
-    case tokenError:
-      return nil, fmt.Errorf("Error: %v", t)
-    default:
-      return p.parseExpression(t)
-  }
+  return p.parseExpression()
 }
 
 /**
  * Parse
  */
-func (p *parser) parseExpression(left token) (executable, error) {
-  t := p.next()
-  switch t.which {
+func (p *parser) parseExpression() (executable, error) {
+  return p.parseArithmetic()
+  /*
+  left := p.peek(0)
+  switch left.which {
     case tokenEOF:
-      return p.parsePrimary(left)
+      return p.parsePrimary()
     case tokenError:
-      return nil, fmt.Errorf("Error: %v", t)
-    case tokenAdd, tokenSub, tokenMul, tokenDiv:
-      return p.parseArithmetic(left, t)
-    default:
-      return nil, fmt.Errorf("Illegal token in expression: %v", t)
+      return nil, fmt.Errorf("Error: %v", left)
   }
+  
+  op := p.peek(1)
+  switch op.which {
+    case tokenEOF:
+      return nil, fmt.Errorf("Unexpected end-of-input")
+    case tokenError:
+      return nil, fmt.Errorf("Error: %v", op)
+    case tokenAdd, tokenSub, tokenMul, tokenDiv:
+      return p.parseArithmetic()
+    default:
+      return nil, fmt.Errorf("Illegal token in expression: %v", op)
+  }
+  */
 }
 
 /**
  * Parse an arithmetic expression
  */
-func (p *parser) parseArithmetic(left, op token) (executable, error) {
-  t := p.next()
-  switch t.which {
-    case tokenEOF:
-      return nil, fmt.Errorf("Unexpected end-of-input", t)
-    case tokenError:
-      return nil, fmt.Errorf("Error: %v", t)
-    case tokenNumber:
-      return &arithmeticNode{node{}, op, left.value.(float64), t.value.(float64)}, nil
-    default:
-      return nil, fmt.Errorf("Illegal token in arithmetic expression: %v", t)
+func (p *parser) parseArithmetic() (executable, error) {
+  
+  left, err := p.parsePrimary()
+  if err != nil {
+    return nil, err
   }
+  
+  op := p.peek(0)
+  switch op.which {
+    case tokenError:
+      return nil, fmt.Errorf("Error: %v", op)
+    case tokenAdd, tokenSub, tokenMul, tokenDiv:
+      break // valid tokens
+    default:
+      return left, nil
+  }
+  
+  p.next()
+  right, err := p.parseArithmetic()
+  if err != nil {
+    return nil, err
+  }
+  
+  return &arithmeticNode{node{}, op, left, right}, nil
 }
 
 /**
  * Parse a primary expression
  */
-func (p *parser) parsePrimary(t token) (executable, error) {
+func (p *parser) parsePrimary() (executable, error) {
+  t := p.next()
   switch t.which {
     case tokenEOF:
-      return nil, fmt.Errorf("Unexpected end-of-input", t)
+      return nil, fmt.Errorf("Unexpected end-of-input")
     case tokenError:
       return nil, fmt.Errorf("Error: %v", t)
+    case tokenLParen:
+      return p.parseParen()
     case tokenIdentifier:
       return &identNode{node{}, t.value.(string)}, nil
     case tokenNumber, tokenString:
@@ -155,6 +174,24 @@ func (p *parser) parsePrimary(t token) (executable, error) {
     case tokenNil:
       return &literalNode{node{}, nil}, nil
     default:
-      return nil, fmt.Errorf("Illegal token in arithmetic expression: %v", t)
+      return nil, fmt.Errorf("Illegal token in primary expression: %v", t)
   }
+}
+
+/**
+ * Parse a (sub-expression)
+ */
+func (p *parser) parseParen() (executable, error) {
+  
+  e, err := p.parseExpression()
+  if err != nil {
+    return nil, err
+  }
+  
+  t := p.next()
+  if t.which != tokenRParen {
+    return nil, fmt.Errorf("Expected ')' but found %v", t)
+  }
+  
+  return e, nil
 }

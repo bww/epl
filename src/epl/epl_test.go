@@ -180,8 +180,9 @@ func compileAndValidate(test *testing.T, source string, expect []token) {
 
 func TestParse(t *testing.T) {
   parseAndRun(t, `1+2`)
-  parseAndRun(t, `1`)
+  parseAndRun(t, `1 && 2`)
   parseAndRun(t, `"Yes" + 2`)
+  parseAndRun(t, `1 - 2 + (2 * 3)`)
   parseAndRun(t, `true`)
   parseAndRun(t, `false`)
   parseAndRun(t, `nil`)
@@ -193,18 +194,21 @@ func parseAndRun(t *testing.T, source string) {
   p := newParser(s)
   r := &runtime{os.Stdout}
   
+  fmt.Printf("A> [%v]\n", source)
+  
   x, err := p.parse()
   if err != nil {
     t.Error(err)
+    return
   }
   
-  fmt.Println("-----> %v", x)
+  fmt.Printf("B> [%v] %v\n", source, x)
   
   y, err := x.exec(r, nil)
   if err != nil {
     t.Error(err)
   }else{
-    fmt.Println("-----> %v", y)
+    fmt.Printf("Z> %v\n", y)
   }
   
 }
