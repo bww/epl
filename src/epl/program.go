@@ -31,6 +31,7 @@
 package epl
 
 import (
+  "os"
   "io"
   "fmt"
   "reflect"
@@ -49,17 +50,65 @@ type Context interface {
 type VariableProvider func(name string)(interface{}, error)
 
 /**
- * Executable context
+ * Runtime context
  */
 type runtime struct {
   stdout    io.Writer
 }
 
 /**
+ * Executable context
+ */
+type context struct {
+  stack   []interface{}
+}
+
+/**
+ * Create a new context
+ */
+func newContext(f interface{}) *context {
+  return &context{[]interface{}{f}}
+}
+
+/**
+ * Push a frame
+ */
+func (c *context) push(f interface{}) *context {
+  if l := len(c.stack); cap(c.stack) > l {
+    c.stack = c.stack[:l+1]
+    c.stack[l] = f
+  }else{
+    c.stack = append(c.stack, f)
+  }
+  return c
+}
+
+/**
+ * Pop a frame
+ */
+func (c *context) pop(f interface{}) *context {
+  if l := len(c.stack); l > 0 {
+    c.stack = c.stack[:l-1]
+  }
+  return c
+}
+
+/**
+ * Obtain a value
+ */
+func (c *context) get(n string) (interface{}, error) {
+  if l := len(c.stack); l > 0 {
+    return derefProp(c.stack[l-1], n)
+  }else{
+    return nil, fmt.Errorf("No context")
+  }
+}
+
+/**
  * Executable
  */
 type executable interface {
-  exec(*runtime, interface{})([]interface{}, error)
+  exec(*runtime, *context)([]interface{}, error)
 }
 
 /**
@@ -79,8 +128,22 @@ type node struct {
 /**
  * Execute
  */
-func (n *node) exec(runtime *runtime, context interface{}) ([]interface{}, error) {
+func (n *node) exec(runtime *runtime, context *context) ([]interface{}, error) {
   return nil, fmt.Errorf("No implementation")
+}
+
+/**
+ * A program
+ */
+type Program struct {
+  root executable
+}
+
+/**
+ * Execute
+ */
+func (p *Program) Exec(context interface{}) ([]interface{}, error) {
+  return p.root.exec(&runtime{os.Stdout}, newContext(context))
 }
 
 /**
@@ -108,9 +171,9 @@ type logicalOrNode struct {
 /**
  * Execute
  */
-func (n *logicalOrNode) exec(runtime *runtime, context interface{}) ([]interface{}, error) {
+func (n *logicalOrNode) exec(runtime *runtime, context *context) ([]interface{}, error) {
   
-  lvi, err := execReturnSingle(n.left, runtime, context)
+  lvi, err := execReturnSingle(runtime, context, n.left)
   if err != nil {
     return nil, err
   }
@@ -123,7 +186,7 @@ func (n *logicalOrNode) exec(runtime *runtime, context interface{}) ([]interface
     return []interface{}{true}, nil
   }
   
-  rvi, err := execReturnSingle(n.right, runtime, context)
+  rvi, err := execReturnSingle(runtime, context, n.right)
   if err != nil {
     return nil, err
   }
@@ -146,9 +209,9 @@ type logicalAndNode struct {
 /**
  * Execute
  */
-func (n *logicalAndNode) exec(runtime *runtime, context interface{}) ([]interface{}, error) {
+func (n *logicalAndNode) exec(runtime *runtime, context *context) ([]interface{}, error) {
   
-  lvi, err := execReturnSingle(n.left, runtime, context)
+  lvi, err := execReturnSingle(runtime, context, n.left)
   if err != nil {
     return nil, err
   }
@@ -161,7 +224,7 @@ func (n *logicalAndNode) exec(runtime *runtime, context interface{}) ([]interfac
     return []interface{}{false}, nil
   }
   
-  rvi, err := execReturnSingle(n.right, runtime, context)
+  rvi, err := execReturnSingle(runtime, context, n.right)
   if err != nil {
     return nil, err
   }
@@ -185,9 +248,9 @@ type arithmeticNode struct {
 /**
  * Execute
  */
-func (n *arithmeticNode) exec(runtime *runtime, context interface{}) ([]interface{}, error) {
+func (n *arithmeticNode) exec(runtime *runtime, context *context) ([]interface{}, error) {
   
-  lvi, err := execReturnSingle(n.left, runtime, context)
+  lvi, err := execReturnSingle(runtime, context, n.left)
   if err != nil {
     return nil, err
   }
@@ -196,7 +259,7 @@ func (n *arithmeticNode) exec(runtime *runtime, context interface{}) ([]interfac
     return nil, err
   }
   
-  rvi, err := execReturnSingle(n.right, runtime, context)
+  rvi, err := execReturnSingle(runtime, context, n.right)
   if err != nil {
     return nil, err
   }
@@ -232,13 +295,13 @@ type relationalNode struct {
 /**
  * Execute
  */
-func (n *relationalNode) exec(runtime *runtime, context interface{}) ([]interface{}, error) {
+func (n *relationalNode) exec(runtime *runtime, context *context) ([]interface{}, error) {
   
-  lvi, err := execReturnSingle(n.left, runtime, context)
+  lvi, err := execReturnSingle(runtime, context, n.left)
   if err != nil {
     return nil, err
   }
-  rvi, err := execReturnSingle(n.right, runtime, context)
+  rvi, err := execReturnSingle(runtime, context, n.right)
   if err != nil {
     return nil, err
   }
@@ -275,6 +338,26 @@ func (n *relationalNode) exec(runtime *runtime, context interface{}) ([]interfac
 }
 
 /**
+ * A dereference expression node
+ */
+type derefNode struct {
+  node
+  left  executable
+  ident string
+}
+
+/**
+ * Execute
+ */
+func (n *derefNode) exec(runtime *runtime, context *context) ([]interface{}, error) {
+  v, err := execReturnSingle(runtime, context, n.left)
+  if err != nil {
+    return nil, err
+  }
+  return derefProp(v, n.ident)
+}
+
+/**
  * An identifier expression node
  */
 type identNode struct {
@@ -285,58 +368,13 @@ type identNode struct {
 /**
  * Execute
  */
-func (n *identNode) exec(runtime *runtime, context interface{}) ([]interface{}, error) {
-  switch v := context.(type) {
-    
-    case Context:
-      r, err := v.Variable(n.ident)
-      if err != nil {
-        return nil, err
-      }else{
-        return []interface{}{r}, nil
-      }
-      
-    case VariableProvider:
-      r, err := v(n.ident)
-      if err != nil {
-        return nil, err
-      }else{
-        return []interface{}{r}, nil
-      }
-      
-    case map[string]interface{}:
-      return []interface{}{v[n.ident]}, nil
-      
-    default:
-      return derefProp(context, n.ident)
-      
-  }
-}
-
-/**
- * Execute
- */
-func derefProp(context interface{}, property string) ([]interface{}, error) {
-  c, _ := derefValue(reflect.ValueOf(context))
-  switch c.Kind() {
-    case reflect.Struct:
-      return []interface{}{c.FieldByName(property)}, nil
-    default:
-      return nil, fmt.Errorf("Cannot dereference context: %v (%T)", context, context)
-  }
-}
-
-/**
- * Dereference a value
- */
-func derefValue(value reflect.Value) (reflect.Value, int) {
-  v := value
-  c := 0
-  for ; v.Kind() == reflect.Ptr; {
-    v = v.Elem()
-    c++
-  }
-  return v, c
+func (n *identNode) exec(runtime *runtime, context *context) ([]interface{}, error) {
+  v, err := context.get(n.ident)
+  if err != nil {
+    return nil, err
+  }else{
+   return []interface{}{v}, nil
+ }
 }
 
 /**
@@ -350,14 +388,14 @@ type literalNode struct {
 /**
  * Execute
  */
-func (n *literalNode) exec(runtime *runtime, context interface{}) ([]interface{}, error) {
+func (n *literalNode) exec(runtime *runtime, context *context) ([]interface{}, error) {
   return []interface{}{n.value}, nil
 }
 
 /**
  * Execute expecting a single return value
  */
-func execReturnSingle(e executable, runtime *runtime, context interface{}) (interface{}, error) {
+func execReturnSingle(runtime *runtime, context *context, e executable) (interface{}, error) {
   rva, err := e.exec(runtime, context)
   if err != nil {
     return nil, err
@@ -427,4 +465,61 @@ func asNumber(value interface{}) (float64, error) {
     default:
       return 0, fmt.Errorf("Cannot cast %v (%T) to numeric", value, value)
   }
+}
+
+/**
+ * Dereference
+ */
+func derefProp(context interface{}, ident string) ([]interface{}, error) {
+  switch v := context.(type) {
+    
+    case Context:
+      r, err := v.Variable(ident)
+      if err != nil {
+        return nil, err
+      }else{
+        return []interface{}{r}, nil
+      }
+      
+    case VariableProvider:
+      r, err := v(ident)
+      if err != nil {
+        return nil, err
+      }else{
+        return []interface{}{r}, nil
+      }
+      
+    case map[string]interface{}:
+      return []interface{}{v[ident]}, nil
+      
+    default:
+      return derefField(context, ident)
+      
+  }
+}
+
+/**
+ * Execute
+ */
+func derefField(context interface{}, property string) ([]interface{}, error) {
+  c, _ := derefValue(reflect.ValueOf(context))
+  switch c.Kind() {
+    case reflect.Struct:
+      return []interface{}{c.FieldByName(property)}, nil
+    default:
+      return nil, fmt.Errorf("Cannot dereference context: %v (%T)", context, context)
+  }
+}
+
+/**
+ * Dereference a value
+ */
+func derefValue(value reflect.Value) (reflect.Value, int) {
+  v := value
+  c := 0
+  for ; v.Kind() == reflect.Ptr; {
+    v = v.Elem()
+    c++
+  }
+  return v, c
 }

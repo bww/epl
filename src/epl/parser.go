@@ -90,8 +90,13 @@ func (p *parser) next() token {
 /**
  * Parse
  */
-func (p *parser) parse() (executable, error) {
-  return p.parseExpression()
+func (p *parser) parse() (*Program, error) {
+  e, err := p.parseExpression()
+  if err != nil {
+    return nil, err
+  }else{
+    return &Program{e}, nil
+  }
 }
 
 /**
@@ -193,7 +198,7 @@ func (p *parser) parseRelational() (executable, error) {
  */
 func (p *parser) parseArithmetic() (executable, error) {
   
-  left, err := p.parsePrimary()
+  left, err := p.parseDeref()
   if err != nil {
     return nil, err
   }
@@ -215,6 +220,43 @@ func (p *parser) parseArithmetic() (executable, error) {
   }
   
   return &arithmeticNode{node{}, op, left, right}, nil
+}
+
+/**
+ * Parse a deref expression
+ */
+func (p *parser) parseDeref() (executable, error) {
+  
+  left, err := p.parsePrimary()
+  if err != nil {
+    return nil, err
+  }
+  
+  op := p.peek(0)
+  switch op.which {
+    case tokenError:
+      return nil, fmt.Errorf("Error: %v", op)
+    case tokenDot:
+      break // valid token
+    default:
+      return left, nil
+  }
+  
+  p.next() // consume the operator
+  right, err := p.parseDeref()
+  if err != nil {
+    return nil, err
+  }
+  
+  switch v := right.(type) {
+    case *identNode:
+      return &derefNode{node{}, left, v.ident}, nil
+    case *derefNode:
+      return &derefNode{node{}, left, v.ident}, nil
+    default:
+      return nil, fmt.Errorf("Expected identifier: %v (%T)", right)
+  }
+  
 }
 
 /**

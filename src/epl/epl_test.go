@@ -31,7 +31,6 @@
 package epl
 
 import (
-  "os"
   "fmt"
   "testing"
 )
@@ -179,52 +178,59 @@ func compileAndValidate(test *testing.T, source string, expect []token) {
 }
 
 func TestParse(t *testing.T) {
-  parseAndRun(t, `1+2`, 3)
+  parseAndRun(t, `1+2`, float64(3))
   parseAndRun(t, `1 && 2`, true)
   parseAndRun(t, `true && true`, true)
   parseAndRun(t, `true && false`, true)
   parseAndRun(t, `false && false`, true)
   parseAndRun(t, `"Yes" + 2`, nil)
-  parseAndRun(t, `1 - 2 + (2 * 3)`, -7)
+  parseAndRun(t, `1 - 2 + (2 * 3)`, float64(-7))
   parseAndRun(t, `true`, true)
   parseAndRun(t, `false`, false)
   parseAndRun(t, `nil`, nil)
-  parseAndRun(t, `hi`, nil)
-  parseAndRun(t, `hi+3`, nil)
-  parseAndRun(t, `hi == 3`, nil)
-  parseAndRun(t, `hi > 3`, nil)
-  parseAndRun(t, `hi < 4 || 1 + 2 < 5`, nil)
+  parseAndRun(t, `num`, nil)
+  parseAndRun(t, `num+3`, nil)
+  parseAndRun(t, `num == 3`, nil)
+  parseAndRun(t, `num > 3`, nil)
+  parseAndRun(t, `num < 4 || 1 + 2 < 5`, nil)
   parseAndRun(t, `"foo" > 3`, nil)
   parseAndRun(t, `"foo" > "f"`, nil)
   parseAndRun(t, `"foo" == "foo"`, nil)
+  parseAndRun(t, `foo.bar`, nil)
+  parseAndRun(t, `foo.bar.zar`, nil)
 }
 
 func parseAndRun(t *testing.T, source string, result interface{}) {
   
   s := newScanner(source)
   p := newParser(s)
-  r := &runtime{os.Stdout}
+  c := map[string]interface{}{
+    "num": 123,
+    "foo": map[string]interface{}{
+      "bar": map[string]interface{}{
+        "zar": "THIS IS IT, BOYS",
+      },
+    },
+  }
   
   fmt.Printf("A> [%v]\n", source)
   
   x, err := p.parse()
   if err != nil {
-    t.Error(err)
+    t.Error(fmt.Errorf("[%s] %v", source, err))
     return
   }
   
-  fmt.Printf("B> %v\n", x)
-  
-  y, err := x.exec(r, map[string]interface{}{"hi": 123})
+  y, err := x.Exec(c)
   if err != nil {
-    t.Error(err)
+    t.Error(fmt.Errorf("[%s] %v", source, err))
     return
   }
   
   fmt.Printf("Z> %v\n", y)
   
   if y == nil || len(y) != 1 || y[0] != result {
-    t.Error(fmt.Errorf("Expected %v, got %v", result, y[0]))
+    t.Error(fmt.Errorf("[%s] Expected %v, got %v", source, result, y[0]))
     return
   }
   
