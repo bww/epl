@@ -29,3 +29,10 @@
 // 
 
 package epl
+
+/**
+ * Compile a program
+ */
+func Compile(source string) (*Program, error) {
+  return newParser(newScanner(source)).parse()
+}

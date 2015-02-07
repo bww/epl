@@ -35,82 +35,21 @@ import (
   "testing"
 )
 
-func TestThis(t *testing.T) {
-  
-  sources := []string{
-    `1 + 2`,
-  }
-  
-  for _, e := range sources {
-    compileAndValidate(t, e, nil)
-  }
-  
-}
-
-/*
-func TestBasicEscaping(t *testing.T) {
-  var source string
-  
-  source = `\foo`
-  compileAndValidate(t, source, []token{
-    token{span{source, 0, 4}, tokenVerbatim, source},
-    token{span{source, 4, 0}, tokenEOF, nil},
-  })
-  
-  source = `\@`
-  compileAndValidate(t, source, []token{
-    token{span{source, 1, 1}, tokenVerbatim, "@"},
-    token{span{source, 2, 0}, tokenEOF, nil},
-  })
-  
-  source = `x\@`
-  compileAndValidate(t, source, []token{
-    token{span{source, 0, 1}, tokenVerbatim, "x"},
-    token{span{source, 2, 1}, tokenVerbatim, "@"},
-    token{span{source, 3, 0}, tokenEOF, nil},
-  })
-  
-  source = `\\\@`
-  compileAndValidate(t, source, []token{
-    token{span{source, 0, 1}, tokenVerbatim, "\\"},
-    token{span{source, 3, 1}, tokenVerbatim, "@"},
-    token{span{source, 4, 0}, tokenEOF, nil},
-  })
-  
-  source = `\@\\`
-  compileAndValidate(t, source, []token{
-    token{span{source, 1, 1}, tokenVerbatim, "@"},
-    token{span{source, 2, 1}, tokenVerbatim, "\\"},
-    token{span{source, 4, 0}, tokenEOF, nil},
-  })
-  
-  source = `\\`
-  compileAndValidate(t, source, []token{
-    token{span{source, 1, 1}, tokenVerbatim, "\\"},
-    token{span{source, 2, 0}, tokenEOF, nil},
-  })
-  
-  source = `\`
-  compileAndValidate(t, source, []token{
-    token{span{source, 0, 1}, tokenVerbatim, "\\"},
-    token{span{source, 1, 0}, tokenEOF, nil},
-  })
-  
-  source = `foo\`
-  compileAndValidate(t, source, []token{
-    token{span{source, 0, 4}, tokenVerbatim, "foo\\"},
-    token{span{source, 4, 0}, tokenEOF, nil},
-  })
-  
-}
-*/
+// func TestThis(t *testing.T) {
+//   sources := []string{
+//     `1 + 2`,
+//   }
+//   for _, e := range sources {
+//     compileAndValidate(t, e, nil)
+//   }
+// }
 
 func TestBasicTypes(t *testing.T) {
   var source string
   
   source = `123`
   compileAndValidate(t, source, []token{
-    token{span{source, 1, 3}, tokenNumber, float64(123)},
+    token{span{source, 0, 3}, tokenNumber, float64(123)},
     token{span{source, 6, 0}, tokenEOF, nil},
   })
   
@@ -118,7 +57,6 @@ func TestBasicTypes(t *testing.T) {
 
 func compileAndValidate(test *testing.T, source string, expect []token) {
   fmt.Println(source)
-  
   s := newScanner(source)
   
   for {
@@ -178,28 +116,66 @@ func compileAndValidate(test *testing.T, source string, expect []token) {
 }
 
 func TestParse(t *testing.T) {
-  parseAndRun(t, `1 + 2`, nil, float64(3))
-  parseAndRun(t, `1 && 2`, nil, true)
-  parseAndRun(t, `true && true`, nil, true)
-  parseAndRun(t, `true && false`, nil, true)
-  parseAndRun(t, `false && false`, nil, true)
-  parseAndRun(t, `"Yes" + 2`, nil, nil)
-  parseAndRun(t, `1 - 2 + (2 * 3)`, nil, float64(-7))
+  
+  // basic
+  parseAndRun(t, `1`, nil, float64(1))
+  parseAndRun(t, `123.456`, nil, float64(123.456))
+  parseAndRun(t, `-1`, nil, float64(-1))
+  parseAndRun(t, `-123.456`, nil, float64(-123.456))
   parseAndRun(t, `true`, nil, true)
   parseAndRun(t, `false`, nil, false)
-  parseAndRun(t, `nil`, nil, nil)
-  parseAndRun(t, `num`, nil, nil)
-  parseAndRun(t, `num+3`, nil, nil)
-  parseAndRun(t, `num == 3`, nil, nil)
-  parseAndRun(t, `num > 3`, nil, nil)
-  parseAndRun(t, `num < 4 || 1 + 2 < 5`, nil, nil)
-  parseAndRun(t, `"foo" > 3`, nil, nil)
-  parseAndRun(t, `"foo" > "f"`, nil, nil)
-  parseAndRun(t, `"foo" == "foo"`, nil, nil)
-  parseAndRun(t, `foo.bar`, nil, nil)
-  parseAndRun(t, `foo.bar.zar`, nil, nil)
-  parseAndRun(t, `foo.bar.car`, nil, nil)
-  parseAndRun(t, `foo.bar.car.finally`, nil, nil)
+  parseAndRun(t, `"abcdef"`, nil, "abcdef")
+  
+  // string escapes
+  parseAndRun(t, `"\t\u2022"`, nil, "\t\u2022")
+  parseAndRun(t, `"Joe said \"this is the story...\" and that was that."`, nil, "Joe said \"this is the story...\" and that was that.")
+  
+  // logic
+  parseAndRun(t, `true || true`, nil, true)
+  parseAndRun(t, `true || false`, nil, true)
+  parseAndRun(t, `false || false`, nil, false)
+  parseAndRun(t, `true && true`, nil, true)
+  parseAndRun(t, `true && false`, nil, false)
+  parseAndRun(t, `false && false`, nil, false)
+  parseAndRun(t, `false || true && true`, nil, true)
+  parseAndRun(t, `false || true && false`, nil, false)
+  parseAndRun(t, `false || false && false`, nil, false)
+  
+  // arithmetic
+  parseAndRun(t, `1 + 2`, nil, float64(3))
+  parseAndRun(t, `1.5 + 2.5`, nil, float64(4))
+  parseAndRun(t, `10 - 2`, nil, float64(8))
+  parseAndRun(t, `10 - 20`, nil, float64(-10))
+  
+  // cases with signs and arithmetic
+  parseAndRun(t, `1 + +2`, nil, float64(3))
+  parseAndRun(t, `1 + -2`, nil, float64(-1))
+  parseAndRun(t, `-1 + -2`, nil, float64(-3))
+  parseAndRun(t, `-1 - 2`, nil, float64(-3))
+  
+  // nesting expressions
+  parseAndRun(t, `1 > 2 || 3 > 2`, nil, true)
+  parseAndRun(t, `1 > 2 && 3 > 2`, nil, false)
+  parseAndRun(t, `1 < 2 || 3 < 2`, nil, true)
+  parseAndRun(t, `1 < 2 && 3 > 2`, nil, true)
+  
+  
+  // parseAndRun(t, `1 - 2 + (2 * 3)`, nil, float64(-7))
+  // parseAndRun(t, `true`, nil, true)
+  // parseAndRun(t, `false`, nil, false)
+  // parseAndRun(t, `nil`, nil, nil)
+  // parseAndRun(t, `num`, nil, nil)
+  // parseAndRun(t, `num+3`, nil, nil)
+  // parseAndRun(t, `num == 3`, nil, nil)
+  // parseAndRun(t, `num > 3`, nil, nil)
+  // parseAndRun(t, `num < 4 || 1 + 2 < 5`, nil, nil)
+  // parseAndRun(t, `"foo" > 3`, nil, nil)
+  // parseAndRun(t, `"foo" > "f"`, nil, nil)
+  // parseAndRun(t, `"foo" == "foo"`, nil, nil)
+  // parseAndRun(t, `foo.bar`, nil, nil)
+  // parseAndRun(t, `foo.bar.zar`, nil, nil)
+  // parseAndRun(t, `foo.bar.car`, nil, nil)
+  // parseAndRun(t, `foo.bar.car.finally`, nil, nil)
 }
 
 func parseAndRun(t *testing.T, source string, context interface{}, result interface{}) {
@@ -221,7 +197,7 @@ func parseAndRun(t *testing.T, source string, context interface{}, result interf
     }
   }
   
-  fmt.Printf("A> [%v]\n", source)
+  fmt.Printf("--> [%v]\n", source)
   
   x, err := p.parse()
   if err != nil {
@@ -235,7 +211,7 @@ func parseAndRun(t *testing.T, source string, context interface{}, result interf
     return
   }
   
-  fmt.Printf("Z> %v\n", y)
+  fmt.Printf("<-- %v\n", y)
   
   if y != result {
     t.Error(fmt.Errorf("[%s] Expected %v, got %v", source, result, y))

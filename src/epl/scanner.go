@@ -474,6 +474,9 @@ func expressionAction(s *scanner) scannerAction {
           s.emit(token{span{s.text, s.start, s.index - s.start}, tokenType(tokenSuffixEqual | r), string(r)})
         }else if n == '+' {
           s.emit(token{span{s.text, s.start, s.index - s.start}, tokenType(tokenPrefixAdd | r), string(r)})
+        }else if n >= '0' && n <= '9' {
+          s.backup() // unget the first digit; leave the sign
+          return numberAction
         }else{
           s.backup()
           s.emit(token{span{s.text, s.start, s.index - s.start}, tokenType(r), string(r)})
@@ -485,6 +488,9 @@ func expressionAction(s *scanner) scannerAction {
           s.emit(token{span{s.text, s.start, s.index - s.start}, tokenType(tokenSuffixEqual | r), string(r)})
         }else if n == '-' {
           s.emit(token{span{s.text, s.start, s.index - s.start}, tokenType(tokenPrefixSub | r), string(r)})
+        }else if n >= '0' && n <= '9' {
+          s.backup(); s.backup() // unget the sign and the first digit
+          return numberAction
         }else{
           s.backup()
           s.emit(token{span{s.text, s.start, s.index - s.start}, tokenType(r), string(r)})
@@ -744,6 +750,10 @@ func (s *scanner) scanNumber() (float64, numericType, error) {
   start := s.index
   ch := s.next()
   
+  if ch == '+' || ch == '-' {
+    ch = s.next()
+  }
+  
 	if ch == '0' {
 	  
 		// int or float
@@ -809,7 +819,7 @@ func (s *scanner) scanNumber() (float64, numericType, error) {
     if v, err := strconv.ParseFloat(s.text[start:s.index], 64); err != nil {
       return 0, 0, s.errorf(span{s.text, start, s.index - start}, err, "Could not parse number")
     }else{
-      return v, numericInteger, nil
+      return v, numericFloat, nil
     }
 	}else{
     // unscan the non-numeric rune
