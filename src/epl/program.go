@@ -277,6 +277,8 @@ func (n *arithmeticNode) exec(runtime *runtime, context *context) (interface{}, 
       return lv * rv, nil
     case tokenDiv:
       return lv / rv, nil
+    case tokenMod: // truncates to int
+      return int64(lv) % int64(rv), nil
     default:
       return nil, fmt.Errorf("Invalid operator: %v", n.op)
   }

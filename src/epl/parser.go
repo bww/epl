@@ -169,7 +169,7 @@ func (p *parser) parseLogicalAnd() (executable, error) {
  */
 func (p *parser) parseRelational() (executable, error) {
   
-  left, err := p.parseArithmetic()
+  left, err := p.parseArithmeticL1()
   if err != nil {
     return nil, err
   }
@@ -196,7 +196,36 @@ func (p *parser) parseRelational() (executable, error) {
 /**
  * Parse an arithmetic expression
  */
-func (p *parser) parseArithmetic() (executable, error) {
+func (p *parser) parseArithmeticL1() (executable, error) {
+  
+  left, err := p.parseArithmeticL2()
+  if err != nil {
+    return nil, err
+  }
+  
+  op := p.peek(0)
+  switch op.which {
+    case tokenError:
+      return nil, fmt.Errorf("Error: %v", op)
+    case tokenAdd, tokenSub:
+      break // valid tokens
+    default:
+      return left, nil
+  }
+  
+  p.next() // consume the operator
+  right, err := p.parseArithmeticL1()
+  if err != nil {
+    return nil, err
+  }
+  
+  return &arithmeticNode{node{}, op, left, right}, nil
+}
+
+/**
+ * Parse an arithmetic expression
+ */
+func (p *parser) parseArithmeticL2() (executable, error) {
   
   left, err := p.parseDeref()
   if err != nil {
@@ -207,14 +236,14 @@ func (p *parser) parseArithmetic() (executable, error) {
   switch op.which {
     case tokenError:
       return nil, fmt.Errorf("Error: %v", op)
-    case tokenAdd, tokenSub, tokenMul, tokenDiv:
+    case tokenMul, tokenDiv, tokenMod:
       break // valid tokens
     default:
       return left, nil
   }
   
   p.next() // consume the operator
-  right, err := p.parseArithmetic()
+  right, err := p.parseArithmeticL2()
   if err != nil {
     return nil, err
   }

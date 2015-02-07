@@ -146,6 +146,10 @@ func TestParse(t *testing.T) {
   parseAndRun(t, `1.5 + 2.5`, nil, float64(4))
   parseAndRun(t, `10 - 2`, nil, float64(8))
   parseAndRun(t, `10 - 20`, nil, float64(-10))
+  parseAndRun(t, `10 / 2`, nil, float64(5))
+  parseAndRun(t, `10 * 2`, nil, float64(20))
+  parseAndRun(t, `10 * 2 - 1`, nil, float64(19))
+  parseAndRun(t, `10 / 2 - 1`, nil, float64(4))
   
   // cases with signs and arithmetic
   parseAndRun(t, `1 + +2`, nil, float64(3))
@@ -158,7 +162,6 @@ func TestParse(t *testing.T) {
   parseAndRun(t, `1 > 2 && 3 > 2`, nil, false)
   parseAndRun(t, `1 < 2 || 3 < 2`, nil, true)
   parseAndRun(t, `1 < 2 && 3 > 2`, nil, true)
-  
   
   // parseAndRun(t, `1 - 2 + (2 * 3)`, nil, float64(-7))
   // parseAndRun(t, `true`, nil, true)
