@@ -178,39 +178,42 @@ func compileAndValidate(test *testing.T, source string, expect []token) {
 }
 
 func TestParse(t *testing.T) {
-  parseAndRun(t, `1+2`, float64(3))
-  parseAndRun(t, `1 && 2`, true)
-  parseAndRun(t, `true && true`, true)
-  parseAndRun(t, `true && false`, true)
-  parseAndRun(t, `false && false`, true)
-  parseAndRun(t, `"Yes" + 2`, nil)
-  parseAndRun(t, `1 - 2 + (2 * 3)`, float64(-7))
-  parseAndRun(t, `true`, true)
-  parseAndRun(t, `false`, false)
-  parseAndRun(t, `nil`, nil)
-  parseAndRun(t, `num`, nil)
-  parseAndRun(t, `num+3`, nil)
-  parseAndRun(t, `num == 3`, nil)
-  parseAndRun(t, `num > 3`, nil)
-  parseAndRun(t, `num < 4 || 1 + 2 < 5`, nil)
-  parseAndRun(t, `"foo" > 3`, nil)
-  parseAndRun(t, `"foo" > "f"`, nil)
-  parseAndRun(t, `"foo" == "foo"`, nil)
-  parseAndRun(t, `foo.bar`, nil)
-  parseAndRun(t, `foo.bar.zar`, nil)
+  parseAndRun(t, `1 + 2`, nil, float64(3))
+  parseAndRun(t, `1 && 2`, nil, true)
+  parseAndRun(t, `true && true`, nil, true)
+  parseAndRun(t, `true && false`, nil, true)
+  parseAndRun(t, `false && false`, nil, true)
+  parseAndRun(t, `"Yes" + 2`, nil, nil)
+  parseAndRun(t, `1 - 2 + (2 * 3)`, nil, float64(-7))
+  parseAndRun(t, `true`, nil, true)
+  parseAndRun(t, `false`, nil, false)
+  parseAndRun(t, `nil`, nil, nil)
+  parseAndRun(t, `num`, nil, nil)
+  parseAndRun(t, `num+3`, nil, nil)
+  parseAndRun(t, `num == 3`, nil, nil)
+  parseAndRun(t, `num > 3`, nil, nil)
+  parseAndRun(t, `num < 4 || 1 + 2 < 5`, nil, nil)
+  parseAndRun(t, `"foo" > 3`, nil, nil)
+  parseAndRun(t, `"foo" > "f"`, nil, nil)
+  parseAndRun(t, `"foo" == "foo"`, nil, nil)
+  parseAndRun(t, `foo.bar`, nil, nil)
+  parseAndRun(t, `foo.bar.zar`, nil, nil)
 }
 
-func parseAndRun(t *testing.T, source string, result interface{}) {
+func parseAndRun(t *testing.T, source string, context interface{}, result interface{}) {
   
   s := newScanner(source)
   p := newParser(s)
-  c := map[string]interface{}{
-    "num": 123,
-    "foo": map[string]interface{}{
-      "bar": map[string]interface{}{
-        "zar": "THIS IS IT, BOYS",
+  
+  if context == nil {
+    context = map[string]interface{}{
+      "num": 123,
+      "foo": map[string]interface{}{
+        "bar": map[string]interface{}{
+          "zar": "THIS IS IT, BOYS",
+        },
       },
-    },
+    }
   }
   
   fmt.Printf("A> [%v]\n", source)
@@ -221,7 +224,7 @@ func parseAndRun(t *testing.T, source string, result interface{}) {
     return
   }
   
-  y, err := x.Exec(c)
+  y, err := x.Exec(context)
   if err != nil {
     t.Error(fmt.Errorf("[%s] %v", source, err))
     return
@@ -229,8 +232,8 @@ func parseAndRun(t *testing.T, source string, result interface{}) {
   
   fmt.Printf("Z> %v\n", y)
   
-  if y == nil || len(y) != 1 || y[0] != result {
-    t.Error(fmt.Errorf("[%s] Expected %v, got %v", source, result, y[0]))
+  if y != result {
+    t.Error(fmt.Errorf("[%s] Expected %v, got %v", source, result, y))
     return
   }
   

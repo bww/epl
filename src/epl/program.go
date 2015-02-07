@@ -86,7 +86,7 @@ func (c *context) push(f interface{}) *context {
 /**
  * Pop a frame
  */
-func (c *context) pop(f interface{}) *context {
+func (c *context) pop() *context {
   if l := len(c.stack); l > 0 {
     c.stack = c.stack[:l-1]
   }
@@ -108,7 +108,7 @@ func (c *context) get(n string) (interface{}, error) {
  * Executable
  */
 type executable interface {
-  exec(*runtime, *context)([]interface{}, error)
+  exec(*runtime, *context)(interface{}, error)
 }
 
 /**
@@ -128,7 +128,7 @@ type node struct {
 /**
  * Execute
  */
-func (n *node) exec(runtime *runtime, context *context) ([]interface{}, error) {
+func (n *node) exec(runtime *runtime, context *context) (interface{}, error) {
   return nil, fmt.Errorf("No implementation")
 }
 
@@ -142,7 +142,7 @@ type Program struct {
 /**
  * Execute
  */
-func (p *Program) Exec(context interface{}) ([]interface{}, error) {
+func (p *Program) Exec(context interface{}) (interface{}, error) {
   return p.root.exec(&runtime{os.Stdout}, newContext(context))
 }
 
@@ -171,9 +171,9 @@ type logicalOrNode struct {
 /**
  * Execute
  */
-func (n *logicalOrNode) exec(runtime *runtime, context *context) ([]interface{}, error) {
+func (n *logicalOrNode) exec(runtime *runtime, context *context) (interface{}, error) {
   
-  lvi, err := execReturnSingle(runtime, context, n.left)
+  lvi, err := n.left.exec(runtime, context)
   if err != nil {
     return nil, err
   }
@@ -183,10 +183,10 @@ func (n *logicalOrNode) exec(runtime *runtime, context *context) ([]interface{},
   }
   
   if lv {
-    return []interface{}{true}, nil
+    return true, nil
   }
   
-  rvi, err := execReturnSingle(runtime, context, n.right)
+  rvi, err := n.right.exec(runtime, context)
   if err != nil {
     return nil, err
   }
@@ -195,7 +195,7 @@ func (n *logicalOrNode) exec(runtime *runtime, context *context) ([]interface{},
     return nil, err
   }
   
-  return []interface{}{rv}, nil
+  return rv, nil
 }
 
 /**
@@ -209,9 +209,9 @@ type logicalAndNode struct {
 /**
  * Execute
  */
-func (n *logicalAndNode) exec(runtime *runtime, context *context) ([]interface{}, error) {
+func (n *logicalAndNode) exec(runtime *runtime, context *context) (interface{}, error) {
   
-  lvi, err := execReturnSingle(runtime, context, n.left)
+  lvi, err := n.left.exec(runtime, context)
   if err != nil {
     return nil, err
   }
@@ -221,10 +221,10 @@ func (n *logicalAndNode) exec(runtime *runtime, context *context) ([]interface{}
   }
   
   if !lv {
-    return []interface{}{false}, nil
+    return false, nil
   }
   
-  rvi, err := execReturnSingle(runtime, context, n.right)
+  rvi, err := n.right.exec(runtime, context)
   if err != nil {
     return nil, err
   }
@@ -233,7 +233,7 @@ func (n *logicalAndNode) exec(runtime *runtime, context *context) ([]interface{}
     return nil, err
   }
   
-  return []interface{}{rv}, nil
+  return rv, nil
 }
 
 /**
@@ -248,9 +248,9 @@ type arithmeticNode struct {
 /**
  * Execute
  */
-func (n *arithmeticNode) exec(runtime *runtime, context *context) ([]interface{}, error) {
+func (n *arithmeticNode) exec(runtime *runtime, context *context) (interface{}, error) {
   
-  lvi, err := execReturnSingle(runtime, context, n.left)
+  lvi, err := n.left.exec(runtime, context)
   if err != nil {
     return nil, err
   }
@@ -259,7 +259,7 @@ func (n *arithmeticNode) exec(runtime *runtime, context *context) ([]interface{}
     return nil, err
   }
   
-  rvi, err := execReturnSingle(runtime, context, n.right)
+  rvi, err := n.right.exec(runtime, context)
   if err != nil {
     return nil, err
   }
@@ -270,13 +270,13 @@ func (n *arithmeticNode) exec(runtime *runtime, context *context) ([]interface{}
   
   switch n.op.which {
     case tokenAdd:
-      return []interface{}{ lv + rv }, nil
+      return lv + rv, nil
     case tokenSub:
-      return []interface{}{ lv - rv }, nil
+      return lv - rv, nil
     case tokenMul:
-      return []interface{}{ lv * rv }, nil
+      return lv * rv, nil
     case tokenDiv:
-      return []interface{}{ lv / rv }, nil
+      return lv / rv, nil
     default:
       return nil, fmt.Errorf("Invalid operator: %v", n.op)
   }
@@ -295,22 +295,22 @@ type relationalNode struct {
 /**
  * Execute
  */
-func (n *relationalNode) exec(runtime *runtime, context *context) ([]interface{}, error) {
+func (n *relationalNode) exec(runtime *runtime, context *context) (interface{}, error) {
   
-  lvi, err := execReturnSingle(runtime, context, n.left)
+  lvi, err := n.left.exec(runtime, context)
   if err != nil {
     return nil, err
   }
-  rvi, err := execReturnSingle(runtime, context, n.right)
+  rvi, err := n.right.exec(runtime, context)
   if err != nil {
     return nil, err
   }
   
   switch n.op.which {
     case tokenEqual:
-      return []interface{}{ lvi == rvi }, nil
+      return lvi == rvi, nil
     case tokenNotEqual:
-      return []interface{}{ lvi != rvi }, nil
+      return lvi != rvi, nil
   }
   
   lv, err := asNumber(lvi)
@@ -324,13 +324,13 @@ func (n *relationalNode) exec(runtime *runtime, context *context) ([]interface{}
   
   switch n.op.which {
     case tokenLess:
-      return []interface{}{ lv < rv }, nil
+      return lv < rv, nil
     case tokenGreater:
-      return []interface{}{ lv > rv }, nil
+      return lv > rv, nil
     case tokenLessEqual:
-      return []interface{}{ lv <= rv }, nil
+      return lv <= rv, nil
     case tokenGreaterEqual:
-      return []interface{}{ lv >= rv }, nil
+      return lv >= rv, nil
     default:
       return nil, fmt.Errorf("Invalid operator: %v", n.op)
   }
@@ -349,12 +349,19 @@ type derefNode struct {
 /**
  * Execute
  */
-func (n *derefNode) exec(runtime *runtime, context *context) ([]interface{}, error) {
-  v, err := execReturnSingle(runtime, context, n.left)
+func (n *derefNode) exec(runtime *runtime, context *context) (interface{}, error) {
+  
+  v, err := n.left.exec(runtime, context)
   if err != nil {
     return nil, err
   }
-  return derefProp(v, n.ident)
+  
+  z, err := derefProp(v, n.ident)
+  if err != nil {
+    return nil, err
+  }
+  
+  return z, nil
 }
 
 /**
@@ -368,13 +375,8 @@ type identNode struct {
 /**
  * Execute
  */
-func (n *identNode) exec(runtime *runtime, context *context) ([]interface{}, error) {
-  v, err := context.get(n.ident)
-  if err != nil {
-    return nil, err
-  }else{
-   return []interface{}{v}, nil
- }
+func (n *identNode) exec(runtime *runtime, context *context) (interface{}, error) {
+  return context.get(n.ident)
 }
 
 /**
@@ -388,23 +390,8 @@ type literalNode struct {
 /**
  * Execute
  */
-func (n *literalNode) exec(runtime *runtime, context *context) ([]interface{}, error) {
-  return []interface{}{n.value}, nil
-}
-
-/**
- * Execute expecting a single return value
- */
-func execReturnSingle(runtime *runtime, context *context, e executable) (interface{}, error) {
-  rva, err := e.exec(runtime, context)
-  if err != nil {
-    return nil, err
-  }
-  if len(rva) != 1 {
-    return nil, fmt.Errorf("Expected single return value, got %d", len(rva))
-  }else{
-    return rva[0], nil
-  }
+func (n *literalNode) exec(runtime *runtime, context *context) (interface{}, error) {
+  return n.value, nil
 }
 
 /**
@@ -470,42 +457,27 @@ func asNumber(value interface{}) (float64, error) {
 /**
  * Dereference
  */
-func derefProp(context interface{}, ident string) ([]interface{}, error) {
+func derefProp(context interface{}, ident string) (interface{}, error) {
   switch v := context.(type) {
-    
     case Context:
-      r, err := v.Variable(ident)
-      if err != nil {
-        return nil, err
-      }else{
-        return []interface{}{r}, nil
-      }
-      
+      return v.Variable(ident)
     case VariableProvider:
-      r, err := v(ident)
-      if err != nil {
-        return nil, err
-      }else{
-        return []interface{}{r}, nil
-      }
-      
+      return v(ident)
     case map[string]interface{}:
-      return []interface{}{v[ident]}, nil
-      
+      return v[ident], nil
     default:
       return derefField(context, ident)
-      
   }
 }
 
 /**
  * Execute
  */
-func derefField(context interface{}, property string) ([]interface{}, error) {
+func derefField(context interface{}, property string) (interface{}, error) {
   c, _ := derefValue(reflect.ValueOf(context))
   switch c.Kind() {
     case reflect.Struct:
-      return []interface{}{c.FieldByName(property)}, nil
+      return c.FieldByName(property), nil
     default:
       return nil, fmt.Errorf("Cannot dereference context: %v (%T)", context, context)
   }
