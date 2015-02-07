@@ -118,6 +118,7 @@ func compileAndValidate(test *testing.T, source string, expect []token) {
 func TestParse(t *testing.T) {
   
   // basic
+  parseAndRun(t, `nil`, nil, nil)
   parseAndRun(t, `1`, nil, float64(1))
   parseAndRun(t, `123.456`, nil, float64(123.456))
   parseAndRun(t, `-1`, nil, float64(-1))
@@ -144,6 +145,28 @@ func TestParse(t *testing.T) {
   parseAndRun(t, `false || true && true`, nil, true)
   parseAndRun(t, `false || true && false`, nil, false)
   parseAndRun(t, `false || false && false`, nil, false)
+  
+  // relational
+  parseAndRun(t, `1 == 2`, nil, false)
+  parseAndRun(t, `2 == 2`, nil, true)
+  parseAndRun(t, `1 != 2`, nil, true)
+  parseAndRun(t, `2 != 2`, nil, false)
+  parseAndRun(t, `2 < 2`, nil, false)
+  parseAndRun(t, `2 < 2.1`, nil, true)
+  parseAndRun(t, `2 <= 2`, nil, true)
+  parseAndRun(t, `2 <= 2.2`, nil, true)
+  parseAndRun(t, `2.1 > 2`, nil, true)
+  parseAndRun(t, `2 > 2.1`, nil, false)
+  parseAndRun(t, `2 >= 2`, nil, true)
+  parseAndRun(t, `2.1 >= 2`, nil, true)
+  
+  // equality-only
+  parseAndRun(t, `"yes" == "no"`, nil, false)
+  parseAndRun(t, `"yes" == "yes"`, nil, true)
+  parseAndRun(t, `"yes" == 1`, nil, false)
+  parseAndRun(t, `"yes" != "no"`, nil, true)
+  parseAndRun(t, `"yes" != "yes"`, nil, false)
+  parseAndRun(t, `"yes" != 1`, nil, true)
   
   // arithmetic
   parseAndRun(t, `1 + 2`, nil, float64(3))
@@ -172,10 +195,17 @@ func TestParse(t *testing.T) {
   parseAndRun(t, `1 < 2 || 3 < 2`, nil, true)
   parseAndRun(t, `1 < 2 && 3 > 2`, nil, true)
   
-  // parseAndRun(t, `1 - 2 + (2 * 3)`, nil, float64(-7))
-  // parseAndRun(t, `true`, nil, true)
-  // parseAndRun(t, `false`, nil, false)
-  // parseAndRun(t, `nil`, nil, nil)
+  // variables
+  parseAndRun(t, `num`, nil, 123)
+  parseAndRun(t, `foo.bat`, nil, "This is the value")
+  parseAndRun(t, `foo.bar.zar`, nil, "Here's the other value")
+  
+  // variables using a programmable context
+  parseAndRun(t, `foo`, func(n string)(interface{},error){ return n +"_value", nil }, "foo_value")
+  parseAndRun(t, `foo.bar`, func(n string)(interface{},error){
+    return map[string]interface{}{"bar": 123}, nil
+  }, 123)
+  
   // parseAndRun(t, `num`, nil, nil)
   // parseAndRun(t, `num+3`, nil, nil)
   // parseAndRun(t, `num == 3`, nil, nil)
@@ -199,8 +229,9 @@ func parseAndRun(t *testing.T, source string, context interface{}, result interf
     context = map[string]interface{}{
       "num": 123,
       "foo": map[string]interface{}{
+        "bat": "This is the value",
         "bar": map[string]interface{}{
-          "zar": "THIS IS IT, BOYS",
+          "zar": "Here's the other value",
           "car": map[string]interface{}{
             "finally": true,
           },

@@ -472,6 +472,8 @@ func derefProp(context interface{}, ident string) (interface{}, error) {
       return v.Variable(ident)
     case VariableProvider:
       return v(ident)
+    case func(string)(interface{}, error):
+      return v(ident)
     case map[string]interface{}:
       return v[ident], nil
     default:
