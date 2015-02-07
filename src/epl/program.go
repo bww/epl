@@ -342,8 +342,7 @@ func (n *relationalNode) exec(runtime *runtime, context *context) (interface{}, 
  */
 type derefNode struct {
   node
-  left  executable
-  ident string
+  left, right executable
 }
 
 /**
@@ -356,9 +355,17 @@ func (n *derefNode) exec(runtime *runtime, context *context) (interface{}, error
     return nil, err
   }
   
-  z, err := derefProp(v, n.ident)
-  if err != nil {
-    return nil, err
+  context.push(v)
+  defer context.pop()
+  
+  var z interface{}
+  switch v := n.right.(type) {
+    case *identNode:
+      z, err = context.get(v.ident)
+    case *derefNode:
+      z, err = v.exec(runtime, context)
+    default:
+      return nil, fmt.Errorf("Invalid right operand to . (dereference): %v (%T)", v, v)
   }
   
   return z, nil

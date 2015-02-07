@@ -198,6 +198,8 @@ func TestParse(t *testing.T) {
   parseAndRun(t, `"foo" == "foo"`, nil, nil)
   parseAndRun(t, `foo.bar`, nil, nil)
   parseAndRun(t, `foo.bar.zar`, nil, nil)
+  parseAndRun(t, `foo.bar.car`, nil, nil)
+  parseAndRun(t, `foo.bar.car.finally`, nil, nil)
 }
 
 func parseAndRun(t *testing.T, source string, context interface{}, result interface{}) {
@@ -211,6 +213,9 @@ func parseAndRun(t *testing.T, source string, context interface{}, result interf
       "foo": map[string]interface{}{
         "bar": map[string]interface{}{
           "zar": "THIS IS IT, BOYS",
+          "car": map[string]interface{}{
+            "finally": true,
+          },
         },
       },
     }
