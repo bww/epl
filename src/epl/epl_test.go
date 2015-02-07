@@ -126,6 +126,10 @@ func TestParse(t *testing.T) {
   parseAndRun(t, `false`, nil, false)
   parseAndRun(t, `"abcdef"`, nil, "abcdef")
   
+  // weird but valid
+  parseAndRun(t, `("abcdef")`, nil, "abcdef")
+  parseAndRun(t, `((-5))`, nil, float64(-5))
+  
   // string escapes
   parseAndRun(t, `"\t\u2022"`, nil, "\t\u2022")
   parseAndRun(t, `"Joe said \"this is the story...\" and that was that."`, nil, "Joe said \"this is the story...\" and that was that.")
@@ -148,8 +152,13 @@ func TestParse(t *testing.T) {
   parseAndRun(t, `10 - 20`, nil, float64(-10))
   parseAndRun(t, `10 / 2`, nil, float64(5))
   parseAndRun(t, `10 * 2`, nil, float64(20))
+  parseAndRun(t, `10 % 3`, nil, int64(1))
+  
+  // order of operations
   parseAndRun(t, `10 * 2 - 1`, nil, float64(19))
   parseAndRun(t, `10 / 2 - 1`, nil, float64(4))
+  parseAndRun(t, `10 * (2 - 1)`, nil, float64(10))
+  parseAndRun(t, `10 / (2 - 1)`, nil, float64(10))
   
   // cases with signs and arithmetic
   parseAndRun(t, `1 + +2`, nil, float64(3))

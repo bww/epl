@@ -249,7 +249,7 @@ type scanner struct {
   index     int
   width     int // current rune width
   start     int // token start position
-  depth     int // meta depth
+  depth     int // expression depth
   tokens    chan token
   state     scannerAction
 }
@@ -499,7 +499,7 @@ func expressionAction(s *scanner) scannerAction {
         }
         return expressionAction
       
-      case r == '=' || r == '!' || r == '<' || r == '>' || r == ':' || r == '*' || r == '/':
+      case r == '=' || r == '!' || r == '<' || r == '>' || r == ':' || r == '*' || r == '/' || r == '%':
         if n := s.next(); n == '=' {
           s.emit(token{span{s.text, s.start, s.index - s.start}, tokenType(tokenSuffixEqual | r), string(r)})
         }else{
@@ -509,7 +509,7 @@ func expressionAction(s *scanner) scannerAction {
         return expressionAction
         
       default:
-        return s.error(s.errorf(span{s.text, s.index, 1}, nil, "Syntax error in meta"))
+        return s.error(s.errorf(span{s.text, s.index, 1}, nil, "Syntax error"))
         
     }
   }
