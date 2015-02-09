@@ -500,9 +500,9 @@ func derefMember(context interface{}, property string) (interface{}, error) {
       return nil, fmt.Errorf("Method %v of %v (%T) did not return a value", v, value, value)
     }else if l := len(r); l < 1 || l > 2 {
       return nil, fmt.Errorf("Method %v of %v (%T) must return either (interface{}) or (interface{}, error)", v, value, value)
-    }else if len(r) == 1 {
+    }else if l == 1 {
       return r[0].Interface(), nil
-    }else if len(r) == 2 {
+    }else if l == 2 {
       r0 := r[0].Interface()
       r1 := r[1].Interface()
       if r1 == nil {
