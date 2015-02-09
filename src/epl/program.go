@@ -496,10 +496,24 @@ func derefMember(context interface{}, property string) (interface{}, error) {
   v = value.MethodByName(property)
   if v.IsValid() {
     r := v.Call(make([]reflect.Value,0))
-    if r == nil || len(r) != 1 {
-      return nil, fmt.Errorf("Method %v of %v (%T) did not return a single value", v, value, value)
-    }else{
+    if r == nil {
+      return nil, fmt.Errorf("Method %v of %v (%T) did not return a value", v, value, value)
+    }else if l := len(r); l < 1 || l > 2 {
+      return nil, fmt.Errorf("Method %v of %v (%T) must return either (interface{}) or (interface{}, error)", v, value, value)
+    }else if len(r) == 1 {
       return r[0].Interface(), nil
+    }else if len(r) == 2 {
+      r0 := r[0].Interface()
+      r1 := r[1].Interface()
+      if r1 == nil {
+        return r0, nil
+      }
+      switch e := r1.(type) {
+        case error:
+          return r0, e
+        default:
+          return nil, fmt.Errorf("Method %v of %v (%T) must return either (interface{}) or (interface{}, error)", v, value, value)
+      }
     }
   }
   
