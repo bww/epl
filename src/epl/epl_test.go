@@ -35,6 +35,8 @@ import (
   "testing"
 )
 
+type intLike int
+
 type SomeContext struct {
   StringField   string
   IntField      int
@@ -230,6 +232,10 @@ func TestParse(t *testing.T) {
   parseAndRun(t, `foo.bar`, func(n string)(interface{},error){
     return map[string]interface{}{"bar": 123}, nil
   }, 123)
+  
+  // custom types for numerics
+  parseAndRun(t, `custom`, map[string]interface{}{ "custom": intLike(123) }, 123)
+  parseAndRun(t, `custom + 1`, map[string]interface{}{ "custom": intLike(123) }, 124)
   
   // UUID variables
   parseAndRun(t, `U:7388AA2B-44C3-4146-8F17-C78F89B5F7D8`, func(n string)(interface{},error){

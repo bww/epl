@@ -398,6 +398,20 @@ func (n *literalNode) exec(runtime *runtime, context *context) (interface{}, err
  * Obtain an interface value as a bool
  */
 func asBool(value interface{}) (bool, error) {
+  v := reflect.ValueOf(value)
+  switch v.Kind() {
+    case reflect.Bool:
+      return v.Bool(), nil
+    case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+      return v.Int() != 0, nil
+    case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+      return v.Uint() != 0, nil
+    case reflect.Float32, reflect.Float64:
+      return v.Float() != 0, nil
+    default:
+      return false, fmt.Errorf("Cannot cast %v (%T) to bool", value, value)
+  }
+  /*
   switch v := value.(type) {
     case bool:
       return v, nil
@@ -420,35 +434,21 @@ func asBool(value interface{}) (bool, error) {
     default:
       return false, fmt.Errorf("Cannot cast %v (%T) to bool", value, value)
   }
+  */
 }
 
 /**
  * Obtain an interface value as a number
  */
 func asNumber(value interface{}) (float64, error) {
-  switch v := value.(type) {
-    case int:
-      return float64(v), nil
-    case uint8:
-      return float64(v), nil
-    case uint16:
-      return float64(v), nil
-    case uint32:
-      return float64(v), nil
-    case uint64:
-      return float64(v), nil
-    case int8:
-      return float64(v), nil
-    case int16:
-      return float64(v), nil
-    case int32:
-      return float64(v), nil
-    case int64:
-      return float64(v), nil
-    case float32:
-      return float64(v), nil
-    case float64:
-      return v, nil
+  v := reflect.ValueOf(value)
+  switch v.Kind() {
+    case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+      return float64(v.Int()), nil
+    case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+      return float64(v.Uint()), nil
+    case reflect.Float32, reflect.Float64:
+      return v.Float(), nil
     default:
       return 0, fmt.Errorf("Cannot cast %v (%T) to numeric", value, value)
   }
