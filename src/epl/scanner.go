@@ -360,6 +360,59 @@ func (s *scanner) matchAt(index int, text string) bool {
 }
 
 /**
+ * Match ahead. The shortest matching string in the set will succeed.
+ */
+func (s *scanner) matchAny(texts ...string) (bool, string) {
+  return s.matchAnyAt(s.index, texts...)
+}
+
+/**
+ * Match ahead. The shortest matching string in the set will succeed.
+ */
+func (s *scanner) matchAnyAt(index int, texts ...string) (bool, string) {
+  i := index
+  m := 0
+  
+  if i < 0 {
+    return false, ""
+  }
+  
+  for _, v := range texts {
+    w := len(v)
+    if w > m {
+      m = w
+    }
+  }
+  
+  for n := 0; n < m; {
+    for _, text := range texts {
+      
+      if i >= len(s.text) {
+        return false, ""
+      }
+      if n >= len(text) {
+        continue
+      }
+      
+      r, w := utf8.DecodeRuneInString(s.text[i:])
+      i += w
+      c, z := utf8.DecodeRuneInString(text[n:])
+      n += z
+      
+      if r != c {
+        continue
+      }
+      if n >= len(text) {
+        return true, text
+      }
+      
+    }
+  }
+  
+  return false, ""
+}
+
+/**
  * Find the next occurance of any character in the specified string
  */
 func (s *scanner) findFrom(index int, any string, invert bool) int {
@@ -617,8 +670,9 @@ func (s *scanner) scanIdentifier() (string, error) {
 func (s *scanner) scanIdentifierOrUUID() (string, error) {
   var start int
   
-  if s.match("U:") {
-    s.next(); s.next() // skip "U:"
+  u, _ := s.matchAny("U:", "u:")
+  if u {
+    s.next(); s.next() // skip "U:" or "u:"
     start = s.index
     for r := s.next(); r == '-' || (r >= 'A' && r <= 'F') || (r >= 'a' && r <= 'f' ) || unicode.IsDigit(r); {
       r = s.next()
