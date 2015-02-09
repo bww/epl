@@ -105,7 +105,6 @@ const (
   tokenTrue
   tokenFalse
   tokenNil
-  tokenRange
   
   tokenLParen           = '('
   tokenRParen           = ')'
@@ -177,8 +176,6 @@ func (t tokenType) String() string {
       return "false"
     case tokenNil:
       return "nil"
-    case tokenRange:
-      return "range"
     default:
       if t < 128 {
         return fmt.Sprintf("'%v'", string(t))
@@ -546,7 +543,7 @@ func numberAction(s *scanner) scannerAction {
  */
 func identifierAction(s *scanner) scannerAction {
   
-  v, err := s.scanIdentifier()
+  v, err := s.scanIdentifierOrUUID()
   if err != nil {
     s.error(s.errorf(span{s.text, s.index, 1}, err, "Invalid identifier"))
   }
@@ -559,8 +556,6 @@ func identifierAction(s *scanner) scannerAction {
       s.emit(token{t, tokenFalse, v})
     case "nil":
       s.emit(token{t, tokenNil, nil})
-    case "range":
-      s.emit(token{t, tokenRange, v})
     default:
       s.emit(token{t, tokenIdentifier, v})
   }
@@ -614,6 +609,29 @@ func (s *scanner) scanIdentifier() (string, error) {
 	}
 	s.backup() // unget the last character
 	return s.text[start:s.index], nil
+}
+
+/**
+ * Scan an identifier or UUID
+ */
+func (s *scanner) scanIdentifierOrUUID() (string, error) {
+  var start int
+  
+  if s.match("U:") {
+    s.next(); s.next() // skip "U:"
+    start = s.index
+    for r := s.next(); r == '-' || (r >= 'A' && r <= 'F') || (r >= 'a' && r <= 'f' ) || unicode.IsDigit(r); {
+      r = s.next()
+    }
+  }else{
+    start = s.index
+    for r := s.next(); r == '_' || unicode.IsLetter(r) || unicode.IsDigit(r); {
+      r = s.next()
+    }
+  }
+  
+  s.backup() // unget the last character
+  return s.text[start:s.index], nil
 }
 
 /**
