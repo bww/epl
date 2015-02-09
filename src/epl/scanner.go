@@ -711,7 +711,7 @@ func digitValue(ch rune) int {
     case 'A' <= ch && ch <= 'F':
       return int(ch - 'A' + 10)
 	}
-	return 16 // too big
+	return math.MaxInt32 // too big
 }
 
 /**
@@ -729,10 +729,11 @@ func (s *scanner) scanDigits(base, n int) (string, error) {
 	for r := s.next(); n > 0 && digitValue(r) < base; {
 		r = s.next(); n--
 	}
+  s.backup() // unget the stop character
 	if n > 0 {
 		return "", s.errorf(span{s.text, start, s.index - start}, nil, "Not enough digits")
 	}else{
-	  return s.text[start:s.index-1], nil
+	  return s.text[start:s.index], nil
 	}
 }
 
