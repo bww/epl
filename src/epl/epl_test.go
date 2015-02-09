@@ -53,14 +53,9 @@ func (c *SomeContext) ErrorFieldMethod() (string, error) {
   return "", fmt.Errorf("This error is intentional.")
 }
 
-// func TestThis(t *testing.T) {
-//   sources := []string{
-//     `1 + 2`,
-//   }
-//   for _, e := range sources {
-//     compileAndValidate(t, e, nil)
-//   }
-// }
+func (c *SomeContext) RecursiveFieldMethod() *SomeContext {
+  return c
+}
 
 func TestBasicTypes(t *testing.T) {
   var source string
@@ -227,6 +222,8 @@ func TestParse(t *testing.T) {
   parseAndRun(t, `StringFieldMethod`, &SomeContext{StringField:"Hello, there"}, "Hello, there")
   parseAndRun(t, `AnotherFieldMethod`, &SomeContext{StringField:"Hello, there"}, "Hello, there")
   parseAndRun(t, `ErrorFieldMethod`, &SomeContext{StringField:"Hello, there"}, "Hello, there")
+  parseAndRun(t, `MissingFieldMethod`, &SomeContext{StringField:"Hello, there"}, "Hello, there")
+  parseAndRun(t, `RecursiveFieldMethod.MissingMethod`, &SomeContext{StringField:"Hello, there"}, "Hello, there")
   
   // variables using a programmable context
   parseAndRun(t, `foo`, func(n string)(interface{},error){ return n +"_value", nil }, "foo_value")

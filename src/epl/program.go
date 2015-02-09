@@ -119,11 +119,9 @@ type tree interface {
 }
 
 /**
- * An AST node
+ * Node base
  */
-type node struct {
-  subnodes  []executable
-}
+type node struct {}
 
 /**
  * Execute
@@ -150,13 +148,6 @@ func (p *Program) Exec(context interface{}) (interface{}, error) {
  * A program
  */
 type emptyNode struct {
-  node
-}
-
-/**
- * An expression node
- */
-type exprNode struct {
   node
 }
 
@@ -370,7 +361,7 @@ func (n *derefNode) exec(runtime *runtime, context *context) (interface{}, error
       return nil, fmt.Errorf("Invalid right operand to . (dereference): %v (%T)", v, v)
   }
   
-  return z, nil
+  return z, err
 }
 
 /**
