@@ -499,7 +499,7 @@ func derefMember(context interface{}, property string) (interface{}, error) {
     if r == nil || len(r) != 1 {
       return nil, fmt.Errorf("Method %v of %v (%T) did not return a single value", v, value, value)
     }else{
-      return r[0], nil
+      return r[0].Interface(), nil
     }
   }
   

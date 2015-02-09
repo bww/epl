@@ -276,7 +276,7 @@ func parseAndRun(t *testing.T, source string, context interface{}, result interf
   fmt.Printf("<-- %v\n", y)
   
   if y != result {
-    t.Error(fmt.Errorf("[%s] Expected %v, got %v", source, result, y))
+    t.Error(fmt.Errorf("[%s] Expected <%v> (%T), got <%v> (%T)", source, result, result, y, y))
     return
   }
   
