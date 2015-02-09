@@ -477,21 +477,38 @@ func derefProp(context interface{}, ident string) (interface{}, error) {
     case map[string]interface{}:
       return v[ident], nil
     default:
-      return derefField(context, ident)
+      return derefMember(context, ident)
   }
 }
 
 /**
  * Execute
  */
-func derefField(context interface{}, property string) (interface{}, error) {
-  c, _ := derefValue(reflect.ValueOf(context))
-  switch c.Kind() {
-    case reflect.Struct:
-      return c.FieldByName(property), nil
-    default:
-      return nil, fmt.Errorf("Cannot dereference context: %v (%T)", context, context)
+func derefMember(context interface{}, property string) (interface{}, error) {
+  var v reflect.Value
+  
+  value := reflect.ValueOf(context)
+  deref, _ := derefValue(value)
+  if deref.Kind() != reflect.Struct {
+    return nil, fmt.Errorf("Cannot dereference context: %v (%T)", context, context)
   }
+  
+  v = value.MethodByName(property)
+  if v.IsValid() {
+    r := v.Call(make([]reflect.Value,0))
+    if r == nil || len(r) != 1 {
+      return nil, fmt.Errorf("Method %v of %v (%T) did not return a single value", v, value, value)
+    }else{
+      return r[0], nil
+    }
+  }
+  
+  v = deref.FieldByName(property)
+  if v.IsValid() {
+    return v.Interface(), nil
+  }
+  
+  return nil, fmt.Errorf("No suitable method or field '%v' of %v (%T)", property, value.Interface(), value.Interface())
 }
 
 /**

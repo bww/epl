@@ -35,6 +35,16 @@ import (
   "testing"
 )
 
+type SomeContext struct {
+  StringField   string
+  IntField      int
+  BoolField     bool
+}
+
+func (c *SomeContext) StringFieldMethod() string {
+  return c.StringField
+}
+
 // func TestThis(t *testing.T) {
 //   sources := []string{
 //     `1 + 2`,
@@ -203,6 +213,10 @@ func TestParse(t *testing.T) {
   parseAndRun(t, `num`, nil, 123)
   parseAndRun(t, `foo.bat`, nil, "This is the value")
   parseAndRun(t, `foo.bar.zar`, nil, "Here's the other value")
+  
+  // variables using a struct context
+  parseAndRun(t, `StringField`, &SomeContext{StringField:"Hello, there"}, "Hello, there")
+  parseAndRun(t, `StringFieldMethod`, &SomeContext{StringField:"Hello, there"}, "Hello, there")
   
   // variables using a programmable context
   parseAndRun(t, `foo`, func(n string)(interface{},error){ return n +"_value", nil }, "foo_value")

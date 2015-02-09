@@ -321,7 +321,6 @@ func (p *parser) parseParen() (executable, error) {
   
   e, err := p.parseExpression()
   if err != nil {
-    fmt.Printf("-----> UHHHHHHH? %v\n", err)
     return nil, err
   }
   
