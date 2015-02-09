@@ -123,6 +123,8 @@ func TestParse(t *testing.T) {
   parseAndRun(t, `123.456`, nil, float64(123.456))
   parseAndRun(t, `-1`, nil, float64(-1))
   parseAndRun(t, `-123.456`, nil, float64(-123.456))
+  parseAndRun(t, `0xffff`, nil, float64(0xffff))
+  parseAndRun(t, `01234`, nil, float64(01234))
   parseAndRun(t, `true`, nil, true)
   parseAndRun(t, `false`, nil, false)
   parseAndRun(t, `"abcdef"`, nil, "abcdef")
@@ -132,10 +134,9 @@ func TestParse(t *testing.T) {
   parseAndRun(t, `((-5))`, nil, float64(-5))
   
   // string escapes
-  parseAndRun(t, `"A\nB"`, nil, "A\nB")
+  parseAndRun(t, `"A\n\tB"`, nil, "A\n\tB")
   parseAndRun(t, `"\u2022"`, nil, "\u2022")
-  parseAndRun(t, `"\t\u2022"`, nil, "\t\u2022")
-  parseAndRun(t, `"\U00002022"`, nil, "\t\U00002022")
+  parseAndRun(t, `"\U00002022"`, nil, "\U00002022")
   parseAndRun(t, `"Joe said \"this is the story...\" and that was that."`, nil, "Joe said \"this is the story...\" and that was that.")
   
   // logic
