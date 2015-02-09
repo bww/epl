@@ -218,18 +218,11 @@ func TestParse(t *testing.T) {
     return n, nil
   }, "7388AA2B-44C3-4146-8F17-C78F89B5F7D8")
   
-  // parseAndRun(t, `num`, nil, nil)
-  // parseAndRun(t, `num+3`, nil, nil)
   // parseAndRun(t, `num == 3`, nil, nil)
   // parseAndRun(t, `num > 3`, nil, nil)
   // parseAndRun(t, `num < 4 || 1 + 2 < 5`, nil, nil)
   // parseAndRun(t, `"foo" > 3`, nil, nil)
-  // parseAndRun(t, `"foo" > "f"`, nil, nil)
-  // parseAndRun(t, `"foo" == "foo"`, nil, nil)
-  // parseAndRun(t, `foo.bar`, nil, nil)
-  // parseAndRun(t, `foo.bar.zar`, nil, nil)
-  // parseAndRun(t, `foo.bar.car`, nil, nil)
-  // parseAndRun(t, `foo.bar.car.finally`, nil, nil)
+  
 }
 
 func parseAndRun(t *testing.T, source string, context interface{}, result interface{}) {
