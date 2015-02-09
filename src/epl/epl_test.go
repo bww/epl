@@ -50,7 +50,7 @@ func (c *SomeContext) AnotherFieldMethod() (string, error) {
 }
 
 func (c *SomeContext) ErrorFieldMethod() (string, error) {
-  return "", fmt.Errorf("Broken...")
+  return "", fmt.Errorf("This error is intentional.")
 }
 
 // func TestThis(t *testing.T) {
