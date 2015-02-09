@@ -674,14 +674,25 @@ func (s *scanner) scanIdentifierOrUUID() (string, error) {
   if u {
     s.next(); s.next() // skip "U:" or "u:"
     start = s.index
+    
+    n := 0
     for r := s.next(); r == '-' || (r >= 'A' && r <= 'F') || (r >= 'a' && r <= 'f' ) || unicode.IsDigit(r); {
       r = s.next()
+      if r != '-' {
+        n++
+      }
+    }
+    
+    if n != 32 {
+      return "", s.errorf(span{s.text, start, s.index - start}, nil, "UUID identifier is incorrectly formatted")
     }
   }else{
+    
     start = s.index
     for r := s.next(); r == '_' || unicode.IsLetter(r) || unicode.IsDigit(r); {
       r = s.next()
     }
+    
   }
   
   s.backup() // unget the last character
