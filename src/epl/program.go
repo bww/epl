@@ -411,30 +411,6 @@ func asBool(value interface{}) (bool, error) {
     default:
       return false, fmt.Errorf("Cannot cast %v (%T) to bool", value, value)
   }
-  /*
-  switch v := value.(type) {
-    case bool:
-      return v, nil
-    case uint8:
-      return v != 0, nil
-    case uint16:
-      return v != 0, nil
-    case uint32:
-      return v != 0, nil
-    case uint64:
-      return v != 0, nil
-    case int8:
-      return v != 0, nil
-    case int16:
-      return v != 0, nil
-    case int32:
-      return v != 0, nil
-    case int64:
-      return v != 0, nil
-    default:
-      return false, fmt.Errorf("Cannot cast %v (%T) to bool", value, value)
-  }
-  */
 }
 
 /**
