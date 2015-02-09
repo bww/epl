@@ -210,6 +210,10 @@ func TestParse(t *testing.T) {
   parseAndRun(t, `U:7388AA2B-44C3-4146-8F17-C78F89B5F7D8`, func(n string)(interface{},error){
     return n, nil
   }, "7388AA2B-44C3-4146-8F17-C78F89B5F7D8")
+  parseAndRun(t, `u:7388AA2B-44C3-4146-8F17-C78F89B5F7D8`, func(n string)(interface{},error){
+    return n, nil
+  }, "7388AA2B-44C3-4146-8F17-C78F89B5F7D8")
+  parseAndRun(t, `u:ABGDEF + 1`, nil, nil)
   
   // parseAndRun(t, `num`, nil, nil)
   // parseAndRun(t, `num+3`, nil, nil)

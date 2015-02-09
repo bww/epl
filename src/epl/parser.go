@@ -40,14 +40,13 @@ import (
 type parser struct {
   scanner   *scanner
   la        []token
-  nodes     []executable
 }
 
 /**
  * Create a parser
  */
 func newParser(s *scanner) *parser {
-  return &parser{s, make([]token, 0, 2), make([]executable, 0, 3)}
+  return &parser{s, make([]token, 0, 2)}
 }
 
 /**
@@ -94,6 +93,8 @@ func (p *parser) parse() (*Program, error) {
   e, err := p.parseExpression()
   if err != nil {
     return nil, err
+  }else if t := p.peek(0); t.which != tokenEOF {
+    return nil, fmt.Errorf("Syntax error: %v", t)
   }else{
     return &Program{e}, nil
   }
@@ -320,6 +321,7 @@ func (p *parser) parseParen() (executable, error) {
   
   e, err := p.parseExpression()
   if err != nil {
+    fmt.Printf("-----> UHHHHHHH? %v\n", err)
     return nil, err
   }
   
