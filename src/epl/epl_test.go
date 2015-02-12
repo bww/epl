@@ -244,6 +244,9 @@ func TestParse(t *testing.T) {
   parseAndRun(t, `u:7388AA2B-44C3-4146-8F17-C78F89B5F7D8`, func(n string)(interface{},error){
     return n, nil
   }, "7388AA2B-44C3-4146-8F17-C78F89B5F7D8")
+  parseAndRun(t, `series.u:7388AA2B-44C3-4146-8F17-C78F89B5F7D8`, map[string]interface{}{"series": func(n string)(interface{},error){
+    return n, nil
+  }}, "7388AA2B-44C3-4146-8F17-C78F89B5F7D8")
   
   // parseAndRun(t, `num == 3`, nil, nil)
   // parseAndRun(t, `num > 3`, nil, nil)
