@@ -1,8 +1,6 @@
 
 export GOPATH := $(GOPATH):$(PWD)
 
-SRC=src/epl/*.go
-
 .PHONY: all deps test
 
 all: test
@@ -10,5 +8,5 @@ all: test
 deps:
 
 test:
-	go test epl -test.v
+	go test -test.v
 
