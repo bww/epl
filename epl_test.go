@@ -35,6 +35,12 @@ import (
   "testing"
 )
 
+var (
+  testCompileError  = fmt.Errorf("Compile error")
+  testRuntimeError  = fmt.Errorf("Runtime error")
+  testResultError   = fmt.Errorf("Result error")
+)
+
 type intLike int
 
 type SomeContext struct {
@@ -232,9 +238,9 @@ func TestParse(t *testing.T) {
   parseAndRun(t, `StringField`, &SomeContext{StringField:"Hello, there"}, "Hello, there")
   parseAndRun(t, `StringFieldMethod`, &SomeContext{StringField:"Hello, there"}, "Hello, there")
   parseAndRun(t, `AnotherFieldMethod`, &SomeContext{StringField:"Hello, there"}, "Hello, there")
-  parseAndRun(t, `ErrorFieldMethod`, &SomeContext{StringField:"Hello, there"}, "Hello, there")
-  parseAndRun(t, `MissingFieldMethod`, &SomeContext{StringField:"Hello, there"}, "Hello, there")
-  parseAndRun(t, `RecursiveFieldMethod.MissingMethod`, &SomeContext{StringField:"Hello, there"}, "Hello, there")
+  parseAndRun(t, `ErrorFieldMethod`, &SomeContext{StringField:"Hello, there"}, testRuntimeError)
+  parseAndRun(t, `MissingFieldMethod`, &SomeContext{StringField:"Hello, there"}, testRuntimeError)
+  parseAndRun(t, `RecursiveFieldMethod.MissingMethod`, &SomeContext{StringField:"Hello, there"}, testRuntimeError)
   
   // variables using a programmable context
   parseAndRun(t, `foo`, func(n string)(interface{},error){ return n +"_value", nil }, "foo_value")
@@ -286,25 +292,50 @@ func parseAndRun(t *testing.T, source string, context interface{}, result interf
     }
   }
   
-  fmt.Printf("--> [%v]\n", source)
+  fmt.Printf("----> [%v]\n", source)
   
   x, err := p.parse()
   if err != nil {
-    t.Error(fmt.Errorf("[%s] [[[%v]]]", source, err))
+    if result != testCompileError {
+      t.Error(fmt.Errorf("[%s] %v", source, err))
+    }else{
+      fmt.Printf("(err) %v\n", err)
+    }
     return
+  }else{
+    if result == testCompileError {
+      t.Error(fmt.Errorf("[%s] Expected compile-time error", source))
+      return
+    }
   }
   
   y, err := x.Exec(context)
   if err != nil {
-    t.Error(fmt.Errorf("[%s] %v", source, err))
+    if result != testRuntimeError {
+      t.Error(fmt.Errorf("[%s] %v", source, err))
+    }else{
+      fmt.Printf("(err) %v\n", err)
+    }
     return
+  }else{
+    if result == testRuntimeError {
+      t.Error(fmt.Errorf("[%s] Expected runtime error", source))
+      return
+    }
   }
   
-  fmt.Printf("<-- %v\n", y)
+  fmt.Printf("<---- %v\n", y)
   
   if y != result {
-    t.Error(fmt.Errorf("[%s] Expected <%v> (%T), got <%v> (%T)", source, result, result, y, y))
+    if result != testResultError {
+      t.Error(fmt.Errorf("[%s] Expected <%v> (%T), got <%v> (%T)", source, result, result, y, y))
+    }
     return
+  }else{
+    if result == testResultError {
+      t.Error(fmt.Errorf("[%s] Expected result comparison error", source))
+      return
+    }
   }
   
 }
