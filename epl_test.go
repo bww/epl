@@ -248,7 +248,7 @@ func TestParse(t *testing.T) {
   parseAndRun(t, `RecursiveFieldMethod.MissingMethod`, &SomeContext{StringField:"Hello, there"}, testRuntimeError)
   
   // variables using the environment
-  parseAndRun(t, `SHELL`, &SomeContext{StringField:"Hello, there"}, "/bin/bash")
+  parseAndRun(t, `env.SHELL`, &SomeContext{StringField:"Hello, there"}, "/bin/bash")
   
   // variables using a programmable context
   parseAndRun(t, `foo`, func(n string)(interface{},error){ return n +"_value", nil }, "foo_value")

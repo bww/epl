@@ -179,7 +179,7 @@ type Program struct {
  * Execute
  */
 func (p *Program) Exec(context interface{}) (interface{}, error) {
-  return p.root.exec(&Runtime{os.Stdout}, newContext(environment{}, context))
+  return p.root.exec(&Runtime{os.Stdout}, newContext(map[string]interface{}{"env": environment{}}, context))
 }
 
 /**
