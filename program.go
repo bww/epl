@@ -376,7 +376,7 @@ func (n *derefNode) exec(runtime *Runtime, context *context) (interface{}, error
   switch v := n.right.(type) {
     case *identNode:
       z, err = context.get(n.span, v.ident)
-    case *derefNode:
+    case *derefNode, *indexNode:
       z, err = v.exec(runtime, context)
     default:
       return nil, fmt.Errorf("Invalid right operand to . (dereference): %v (%T)", v, v)

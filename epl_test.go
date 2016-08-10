@@ -224,9 +224,9 @@ func TestParse(t *testing.T) {
   parseAndRun(t, `foo["bar"]["zar"]`, nil, "Here's the other value")
   
   // variables using an array subscript operator
-  parseAndRun(t, `arr[0]`, nil, "This is the value")
-  parseAndRun(t, `foo.arr[1]`, nil, "Here's the other value")
-  parseAndRun(t, `foo["arr"][1]`, nil, "Here's the other value")
+  parseAndRun(t, `arr[(0)]`, nil, "Zero")
+  parseAndRun(t, `foo.arr[1]`, nil, "One")
+  parseAndRun(t, `foo["arr"][2]`, nil, "Two")
   
   // variables using a struct context
   parseAndRun(t, `StringField`, &SomeContext{StringField:"Hello, there"}, "Hello, there")
@@ -272,9 +272,9 @@ func parseAndRun(t *testing.T, source string, context interface{}, result interf
   if context == nil {
     context = map[string]interface{}{
       "num": 123,
-      "arr": []string{ "One", "Two", "Three" },
+      "arr": []string{ "Zero", "One", "Two", "Three" },
       "foo": map[string]interface{}{
-        "arr": []string{ "One", "Two", "Three" },
+        "arr": []string{ "Zero", "One", "Two", "Three" },
         "bat": "This is the value",
         "bar": map[string]interface{}{
           "zar": "Here's the other value",
@@ -290,7 +290,7 @@ func parseAndRun(t *testing.T, source string, context interface{}, result interf
   
   x, err := p.parse()
   if err != nil {
-    t.Error(fmt.Errorf("[%s] %v", source, err))
+    t.Error(fmt.Errorf("[%s] [[[%v]]]", source, err))
     return
   }
   
