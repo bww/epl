@@ -87,6 +87,25 @@ func (p *parser) next() token {
 }
 
 /**
+ * Consume the next token asserting that it is one of the provided token types
+ */
+func (p *parser) nextAssert(valid ...tokenType) (token, error) {
+  t := p.next()
+  switch t.which {
+    case tokenEOF:
+      return token{}, fmt.Errorf("Unexpected end-of-input")
+    case tokenError:
+      return token{}, fmt.Errorf("Error: %v", t)
+  }
+  for _, v := range valid {
+    if t.which == v {
+      return t, nil
+    }
+  }
+  return token{}, invalidTokenError(t, valid...)
+}
+
+/**
  * Parse
  */
 func (p *parser) parse() (*Program, error) {
@@ -133,7 +152,7 @@ func (p *parser) parseLogicalOr() (executable, error) {
     return nil, err
   }
   
-  return &logicalOrNode{node{}, left, right}, nil
+  return &logicalOrNode{node{encompass(op.span, left.src(), right.src()), &op}, left, right}, nil
 }
 
 /**
@@ -162,7 +181,7 @@ func (p *parser) parseLogicalAnd() (executable, error) {
     return nil, err
   }
   
-  return &logicalAndNode{node{}, left, right}, nil
+  return &logicalAndNode{node{encompass(op.span, left.src(), right.src()), &op}, left, right}, nil
 }
 
 /**
@@ -191,7 +210,7 @@ func (p *parser) parseRelational() (executable, error) {
     return nil, err
   }
   
-  return &relationalNode{node{}, op, left, right}, nil
+  return &relationalNode{node{encompass(op.span, left.src(), right.src()), &op}, op, left, right}, nil
 }
 
 /**
@@ -220,7 +239,7 @@ func (p *parser) parseArithmeticL1() (executable, error) {
     return nil, err
   }
   
-  return &arithmeticNode{node{}, op, left, right}, nil
+  return &arithmeticNode{node{encompass(op.span, left.src(), right.src()), &op}, op, left, right}, nil
 }
 
 /**
@@ -249,7 +268,7 @@ func (p *parser) parseArithmeticL2() (executable, error) {
     return nil, err
   }
   
-  return &arithmeticNode{node{}, op, left, right}, nil
+  return &arithmeticNode{node{encompass(op.span, left.src(), right.src()), &op}, op, left, right}, nil
 }
 
 /**
@@ -257,7 +276,7 @@ func (p *parser) parseArithmeticL2() (executable, error) {
  */
 func (p *parser) parseDeref() (executable, error) {
   
-  left, err := p.parsePrimary()
+  left, err := p.parseIndex()
   if err != nil {
     return nil, err
   }
@@ -280,11 +299,53 @@ func (p *parser) parseDeref() (executable, error) {
   
   switch v := right.(type) {
     case *identNode, *derefNode:
-      return &derefNode{node{}, left, v}, nil
+      return &derefNode{node{encompass(op.span, left.src()), &op}, left, v}, nil
     default:
       return nil, fmt.Errorf("Expected identifier: %v (%T)", right)
   }
   
+}
+
+/**
+ * Parse an index expression
+ */
+func (p *parser) parseIndex() (executable, error) {
+  
+  left, err := p.parsePrimary()
+  if err != nil {
+    return nil, err
+  }
+  
+  return p.parseSubscript(left)
+}
+
+/**
+ * Parse an index expression
+ */
+func (p *parser) parseSubscript(left executable) (executable, error) {
+  
+  op := p.peek(0)
+  switch op.which {
+    case tokenError:
+      return nil, fmt.Errorf("Error: %v", op)
+    case tokenLBracket:
+      break // valid token
+    default:
+      return left, nil
+  }
+  
+  p.next() // consume the '['
+  right, err := p.parseExpression()
+  if err != nil {
+    return nil, err
+  }
+  
+  t, err := p.nextAssert(tokenRBracket)
+  if err != nil {
+    return nil, err
+  }
+  
+  return p.parseSubscript(&indexNode{node{encompass(op.span, left.src(), right.src(), t.span), &op}, left, right})
 }
 
 /**
@@ -300,15 +361,15 @@ func (p *parser) parsePrimary() (executable, error) {
     case tokenLParen:
       return p.parseParen()
     case tokenIdentifier:
-      return &identNode{node{}, t.value.(string)}, nil
+      return &identNode{node{t.span, &t}, t.value.(string)}, nil
     case tokenNumber, tokenString:
-      return &literalNode{node{}, t.value}, nil
+      return &literalNode{node{t.span, &t}, t.value}, nil
     case tokenTrue:
-      return &literalNode{node{}, true}, nil
+      return &literalNode{node{t.span, &t}, true}, nil
     case tokenFalse:
-      return &literalNode{node{}, false}, nil
+      return &literalNode{node{t.span, &t}, false}, nil
     case tokenNil:
-      return &literalNode{node{}, nil}, nil
+      return &literalNode{node{t.span, &t}, nil}, nil
     default:
       return nil, fmt.Errorf("Illegal token in primary expression: %v", t)
   }
@@ -330,4 +391,42 @@ func (p *parser) parseParen() (executable, error) {
   }
   
   return e, nil
+}
+
+/**
+ * A parser error
+ */
+type parserError struct {
+  message   string
+  span      span
+  cause     error
+}
+
+/**
+ * Error
+ */
+func (e parserError) Error() string {
+  if e.cause != nil {
+    return fmt.Sprintf("%s: %v\n%v", e.message, e.cause, excerptCallout.FormatExcerpt(e.span))
+  }else{
+    return fmt.Sprintf("%s\n%v", e.message, excerptCallout.FormatExcerpt(e.span))
+  }
+}
+
+/**
+ * Invalid token error
+ */
+func invalidTokenError(t token, e ...tokenType) error {
+  
+  m := fmt.Sprintf("Invalid token: %v", t.which)
+  if e != nil && len(e) > 0 {
+    m += " (expected: "
+    for i, t := range e {
+      if i > 0 { m += ", " }
+      m += fmt.Sprintf("%v", t)
+    }
+    m += ")"
+  }
+  
+  return &parserError{m, t.span, nil}
 }

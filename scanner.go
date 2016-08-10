@@ -75,6 +75,28 @@ func (s span) String() string {
 }
 
 /**
+ * Create a new span that encompasses all the provided spans. The underlying text is taken from the first span.
+ */
+func encompass(a ...span) span {
+  var t string
+  min, max := 0, 0
+  for i, e := range a {
+    if i == 0 {
+      min, max = e.offset, e.offset + e.length
+      t = e.text
+    }else{
+      if e.offset < min {
+        min = e.offset
+      }
+      if e.offset + e.length > max {
+        max = e.offset + e.length
+      }
+    }
+  }
+  return span{t, min, max - min}
+}
+
+/**
  * Numeric type
  */
 type numericType int
@@ -232,9 +254,9 @@ type scannerError struct {
  */
 func (s *scannerError) Error() string {
   if s.cause != nil {
-    return fmt.Sprintf("@[%d+%d] %s: %v", s.span.offset, s.span.length, s.message, s.cause)
+    return fmt.Sprintf("%s: %v\n%v", s.message, s.cause, excerptCallout.FormatExcerpt(s.span))
   }else{
-    return fmt.Sprintf("@[%d+%d] %s", s.span.offset, s.span.length, s.message)
+    return fmt.Sprintf("%s\n%v", s.message, excerptCallout.FormatExcerpt(s.span))
   }
 }
 
