@@ -301,7 +301,7 @@ func (p *parser) parseDeref() (executable, error) {
     case *identNode, *derefNode, *indexNode:
       return &derefNode{node{encompass(op.span, left.src()), &op}, left, v}, nil
     default:
-      return nil, fmt.Errorf("Expected ident, deref or subscript: %v (%T)", right)
+      return nil, fmt.Errorf("Expected ident, deref or subscript: (%T) %v\n%v", right, right, excerptCallout.FormatExcerpt(right.src()))
   }
   
 }

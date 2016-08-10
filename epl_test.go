@@ -140,12 +140,17 @@ func TestParse(t *testing.T) {
   
   // basic
   parseAndRun(t, `nil`, nil, nil)
+  parseAndRun(t, `0`, nil, float64(0))
+  parseAndRun(t, `0.0`, nil, float64(0))
+  parseAndRun(t, `1.0`, nil, float64(1))
   parseAndRun(t, `1`, nil, float64(1))
   parseAndRun(t, `123.456`, nil, float64(123.456))
   parseAndRun(t, `-1`, nil, float64(-1))
   parseAndRun(t, `-123.456`, nil, float64(-123.456))
   parseAndRun(t, `0xffff`, nil, float64(0xffff))
   parseAndRun(t, `01234`, nil, float64(01234))
+  parseAndRun(t, `1e10`, nil, float64(1e10))
+  parseAndRun(t, `1e-10`, nil, float64(1e-10))
   parseAndRun(t, `true`, nil, true)
   parseAndRun(t, `false`, nil, false)
   parseAndRun(t, `"abcdef"`, nil, "abcdef")

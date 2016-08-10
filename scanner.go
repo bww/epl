@@ -855,6 +855,7 @@ func (s *scanner) scanExponent(ch rune) rune {
  * Scan a number
  */
 func (s *scanner) scanNumber() (float64, numericType, error) {
+  var isfloat bool
   start := s.index
   ch := s.next()
   
@@ -876,7 +877,8 @@ func (s *scanner) scanNumber() (float64, numericType, error) {
         hasMantissa = true
       }
       
-      s.backup() // unscan the stop rune
+      // unscan the stop rune
+      s.backup()
       
       if !hasMantissa {
         return 0, 0, s.errorf(span{s.text, start, s.index - start}, nil, "Illegal hexadecimal number")
@@ -897,17 +899,22 @@ func (s *scanner) scanNumber() (float64, numericType, error) {
         ch = s.next()
       }
       
-      s.backup() // unscan the stop rune
+      // check for a fraction
+      if ch == '.' || ch == 'e' || ch == 'E' || ch == 'i' {
+        goto fraction
+      }
+      
+      // unscan the stop rune
+      s.backup()
       
       // octal int
       if has8or9 {
         s.errorf(span{s.text, start, s.index - start}, nil, "Illegal octal number")
       }
       
-      t := s.text[start+1:s.index]
-      if t == "" { // no more text, this is a zero
-        return 0, numericInteger, nil
-      }else if v, err := strconv.ParseInt(t, 8, 64); err != nil {
+      // parse our octal
+      t := s.text[start:s.index]
+      if v, err := strconv.ParseInt(t, 8, 64); err != nil {
         return 0, 0, s.errorf(span{s.text, start, s.index - start}, err, "Could not parse number")
       }else{
         return float64(v), numericInteger, nil
@@ -919,39 +926,40 @@ func (s *scanner) scanNumber() (float64, numericType, error) {
   // decimal int or float
   ch = s.scanMantissa(ch)
   
-  // float
-  if ch == '.' || ch == 'e' || ch == 'E' {
-    // float
+fraction:
+  
+  // check for a fraction
+  if ch == '.' {
+    isfloat = true
     ch = s.scanFraction(ch)
+  }
+  
+  // check for an exponent
+  if ch == 'e' || ch == 'E' {
+    isfloat = true
     ch = s.scanExponent(ch)
-    // unscan the non-numeric rune
-    s.backup()
+  }
+  
+  // unscan the non-numeric rune
+  s.backup()
+  
+  // parse the base-10 number
+  if isfloat {
     if v, err := strconv.ParseFloat(s.text[start:s.index], 64); err != nil {
       return 0, 0, s.errorf(span{s.text, start, s.index - start}, err, "Could not parse number")
     }else{
-      return v, numericInteger, nil
+      return v, numericFloat, nil
     }
   }else{
-    // unscan the non-numeric rune
-    s.backup()
+    if v, err := strconv.ParseInt(s.text[start:s.index], 10, 64); err != nil {
+      return 0, 0, s.errorf(span{s.text, start, s.index - start}, err, "Could not parse number")
+    }else{
+      return float64(v), numericInteger, nil
+    }
   }
-  
-  // integer
-  if v, err := strconv.ParseInt(s.text[start:s.index], 10, 64); err != nil {
-    return 0, 0, s.errorf(span{s.text, start, s.index - start}, err, "Could not parse number")
-  }else{
-    return float64(v), numericInteger, nil
-  }
-  
 }
 
 /*
-func (s *scanner) scanChar() {
-	if s.scanString('\'') != 1 {
-		s.error("illegal char literal")
-	}
-}
-
 func (s *scanner) scanComment(ch rune) rune {
 	// ch == '/' || ch == '*'
 	if ch == '/' {
