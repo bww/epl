@@ -31,6 +31,7 @@
 package epl
 
 import (
+  "os"
   "fmt"
   "testing"
 )
@@ -248,7 +249,8 @@ func TestParse(t *testing.T) {
   parseAndRun(t, `RecursiveFieldMethod.MissingMethod`, &SomeContext{StringField:"Hello, there"}, testRuntimeError)
   
   // variables using the environment
-  parseAndRun(t, `env.SHELL`, &SomeContext{StringField:"Hello, there"}, "/bin/bash")
+  os.Setenv("TEST_ENV_VARIABLE", "This is the value")
+  parseAndRun(t, `env.TEST_ENV_VARIABLE`, &SomeContext{StringField:"Hello, there"}, "This is the value")
   
   // variables using a programmable context
   parseAndRun(t, `foo`, func(n string)(interface{},error){ return n +"_value", nil }, "foo_value")
