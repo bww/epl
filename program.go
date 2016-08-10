@@ -548,11 +548,11 @@ func derefProp(s span, context interface{}, ident string) (interface{}, error) {
       return v[ident], nil
   }
   
-  val, _ := derefValue(reflect.ValueOf(context))
+  val := reflect.ValueOf(context)
   switch val.Kind() {
     case reflect.Map:
       return derefMap(s, val, ident)
-    case reflect.Struct:
+    case reflect.Ptr, reflect.Struct:
       return derefMember(s, val, ident)
     default:
       return nil, runtimeErrorf(s, "Cannot dereference variable: %v", displayType(val))
@@ -577,13 +577,16 @@ func derefMap(s span, val reflect.Value, property string) (interface{}, error) {
  * Execute
  */
 func derefMember(s span, val reflect.Value, property string) (interface{}, error) {
-  var v reflect.Value
+  base := val
   
-  if val.Kind() != reflect.Struct {
+  if base.Kind() == reflect.Ptr {
+    base, _ = derefValue(base)
+  }
+  if base.Kind() != reflect.Struct {
     return nil, runtimeErrorf(s, "Cannot dereference variable: %v", displayType(val))
   }
   
-  v = val.MethodByName(property)
+  v := val.MethodByName(property)
   if v.IsValid() {
     t := v.Type()
     
@@ -617,12 +620,12 @@ func derefMember(s span, val reflect.Value, property string) (interface{}, error
     
   }
   
-  v = val.FieldByName(property)
+  v = base.FieldByName(property)
   if v.IsValid() {
     return v.Interface(), nil
   }
   
-  return nil, nil
+  return nil, fmt.Errorf("No suitable method or field '%v' of %v", property, displayType(val))
 }
 
 /**
