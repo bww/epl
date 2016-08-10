@@ -219,6 +219,15 @@ func TestParse(t *testing.T) {
   parseAndRun(t, `foo.bat`, nil, "This is the value")
   parseAndRun(t, `foo.bar.zar`, nil, "Here's the other value")
   
+  // variables using a map subscript operator
+  parseAndRun(t, `foo["bat"]`, nil, "This is the value")
+  parseAndRun(t, `foo["bar"]["zar"]`, nil, "Here's the other value")
+  
+  // variables using an array subscript operator
+  parseAndRun(t, `arr[0]`, nil, "This is the value")
+  parseAndRun(t, `foo.arr[1]`, nil, "Here's the other value")
+  parseAndRun(t, `foo["arr"][1]`, nil, "Here's the other value")
+  
   // variables using a struct context
   parseAndRun(t, `StringField`, &SomeContext{StringField:"Hello, there"}, "Hello, there")
   parseAndRun(t, `StringFieldMethod`, &SomeContext{StringField:"Hello, there"}, "Hello, there")
@@ -263,7 +272,9 @@ func parseAndRun(t *testing.T, source string, context interface{}, result interf
   if context == nil {
     context = map[string]interface{}{
       "num": 123,
+      "arr": []string{ "One", "Two", "Three" },
       "foo": map[string]interface{}{
+        "arr": []string{ "One", "Two", "Three" },
         "bat": "This is the value",
         "bar": map[string]interface{}{
           "zar": "Here's the other value",

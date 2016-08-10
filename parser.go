@@ -298,10 +298,10 @@ func (p *parser) parseDeref() (executable, error) {
   }
   
   switch v := right.(type) {
-    case *identNode, *derefNode:
+    case *identNode, *derefNode, *indexNode:
       return &derefNode{node{encompass(op.span, left.src()), &op}, left, v}, nil
     default:
-      return nil, fmt.Errorf("Expected identifier: %v (%T)", right)
+      return nil, fmt.Errorf("Expected ident, deref or subscript: %v (%T)", right)
   }
   
 }
