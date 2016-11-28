@@ -688,7 +688,7 @@ func (n *indexNode) exec(runtime *Runtime, context *context) (interface{}, error
   
   deref, _ := derefValue(reflect.ValueOf(left))
   switch deref.Kind() {
-    case reflect.String:
+    case reflect.String: // character index
       return n.execString(runtime, context, deref, val)
     case reflect.Array:
       return n.execArray(runtime, context, deref, val)
@@ -706,6 +706,7 @@ func (n *indexNode) exec(runtime *Runtime, context *context) (interface{}, error
  * Execute
  */
 func (n *indexNode) execString(runtime *Runtime, context *context, val reflect.Value, index reflect.Value) (interface{}, error) {
+  val = reflect.ValueOf([]rune(val.Interface().(string))) // convert to []rune
   
   i, err := asNumberValue(n.right.src(), index)
   if err != nil {
@@ -717,7 +718,7 @@ func (n *indexNode) execString(runtime *Runtime, context *context, val reflect.V
     return nil, runtimeErrorf(n.span, "Index out-of-bounds: %v", i)
   }
   
-  return string(val.Index(int(i)).Interface().(uint8)), nil
+  return string(val.Index(int(i)).Interface().(rune)), nil
 }
 
 /**

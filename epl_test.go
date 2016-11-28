@@ -251,7 +251,8 @@ func TestParse(t *testing.T) {
   parseAndRun(t, `foo["arr"][2]`, nil, "Two")
   
   // variables using a string subscript operator
-  parseAndRun(t, `"hello"[(0)]`, nil, "h")
+  parseAndRun(t, `"hello"[0]`, nil, "h")
+  parseAndRun(t, `"世界"[1]`, nil, "界")
   parseAndRun(t, `foo.bat[0]`, nil, "T")
   
   // variables using a struct context
