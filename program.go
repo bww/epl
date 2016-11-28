@@ -59,23 +59,6 @@ type Runtime struct {
 }
 
 /**
- * The environment context
- */
-type environment struct {}
-
-/**
- * Obtain an environment variable
- */
-func (e environment) Variable(name string) (interface{}, error) {
-  v := os.Getenv(name)
-  if v != "" {
-    return v, nil
-  }else{
-    return nil, undefinedVariableError
-  }
-}
-
-/**
  * Executable context
  */
 type context struct {
@@ -255,7 +238,7 @@ type Program struct {
  * Execute
  */
 func (p *Program) Exec(context interface{}) (interface{}, error) {
-  return p.root.exec(&Runtime{os.Stdout}, newContext(map[string]interface{}{"env": environment{}}, context))
+  return p.root.exec(&Runtime{os.Stdout}, newContext(stdlib, context))
 }
 
 /**
@@ -827,7 +810,7 @@ func (n *invokeNode) print(w io.Writer, opts PrintOptions, state printState) err
   if(n.left != nil){
     n.left.print(w, opts, state.Desc())
   }else{
-    _, err = w.Write([]byte("\n"+ indent + indentLevel +"<nil>\n"))
+    _, err = w.Write([]byte(indent + indentLevel +"<nil>"))
     if err != nil {
       return err
     }

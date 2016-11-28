@@ -296,6 +296,11 @@ func TestParse(t *testing.T) {
     return n, nil
   }}, "7388AA2B-44C3-4146-8F17-C78F89B5F7D8")
   
+  // standard library
+  parseAndRun(t, `len("hello")`, nil, 5)
+  parseAndRun(t, `len(arr)`, nil, 4)
+  parseAndRun(t, `len(fix)`, nil, 3)
+  
   // parseAndRun(t, `num == 3`, nil, nil)
   // parseAndRun(t, `num > 3`, nil, nil)
   // parseAndRun(t, `num < 4 || 1 + 2 < 5`, nil, nil)
@@ -312,6 +317,7 @@ func parseAndRun(t *testing.T, source string, context interface{}, result interf
     context = map[string]interface{}{
       "num": 123,
       "arr": []string{ "Zero", "One", "Two", "Three" },
+      "fix": [3]string{},
       "foo": map[string]interface{}{
         "arr": []string{ "Zero", "One", "Two", "Three" },
         "bat": "This is the value",
