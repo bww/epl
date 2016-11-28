@@ -301,6 +301,7 @@ func TestParse(t *testing.T) {
   parseAndRun(t, `len(arr)`, nil, 4)
   parseAndRun(t, `len(fix)`, nil, 3)
   parseAndRun(t, `match("[h|H]el+o", "Hello")`, nil, true)
+  parseAndRun(t, `match("[h|H]el+o", 123)`, nil, testRuntimeError)
   
   // parseAndRun(t, `num == 3`, nil, nil)
   // parseAndRun(t, `num > 3`, nil, nil)

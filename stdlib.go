@@ -83,10 +83,10 @@ func builtInMatch(e, v interface{}) (bool, error) {
   var se, sv string
   var ok bool
   if se, ok = e.(string); !ok {
-    return false, fmt.Errorf("Invalid parameter to match(string, string)")
+    return false, fmt.Errorf("Invalid parameter to: match(string, string)")
   }
   if sv, ok = v.(string); !ok {
-    return false, fmt.Errorf("Invalid parameter to match(string, string)")
+    return false, fmt.Errorf("Invalid parameter to: match(string, string)")
   }
   return regexp.MatchString(se, sv)
 }
