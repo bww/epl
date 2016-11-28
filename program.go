@@ -113,24 +113,42 @@ func (c *context) pop() *context {
 }
 
 /**
- * Obtain a value
+ * Obtain the top of the stack
  */
-func (c *context) get(r *Runtime, s span, n string) (interface{}, error) {
-  return c.sget(r, s, n, c.stack)
+func (c *context) top() interface{} {
+  if l := len(c.stack); l > 0 {
+    return c.stack[l-1]
+  }else{
+    return nil
+  }
 }
 
 /**
  * Obtain a value
  */
-func (c *context) sget(r *Runtime, s span, n string, k []interface{}) (interface{}, error) {
+func (c *context) get(r *Runtime, s span, n string) (interface{}, error) {
+  return c.sget(r, s, n, c.stack, derefOptionDerefFunctions)
+}
+
+/**
+ * Obtain a value, without dereferencing
+ */
+func (c *context) value(r *Runtime, s span, n string) (interface{}, error) {
+  return c.sget(r, s, n, c.stack, 0)
+}
+
+/**
+ * Obtain a value
+ */
+func (c *context) sget(r *Runtime, s span, n string, k []interface{}, opts derefOptions) (interface{}, error) {
   l := len(k)
   if l < 1 {
     return nil, nil
   }
   
-  v, err := derefProp(r, c, s, k[l-1], n)
+  v, err := derefProp(r, c, s, k[l-1], n, opts)
   if err == undefinedVariableError && l > 1 {
-    return c.sget(r, s, n, k[:l-1])
+    return c.sget(r, s, n, k[:l-1], opts)
   }else if err != nil {
     return nil, err
   }
@@ -151,11 +169,50 @@ var typeOfRuntime = reflect.TypeOf(&Runtime{})
 var typeOfError   = reflect.TypeOf((*error)(nil)).Elem()
 
 /**
+ * Print options
+ */
+type PrintOptions int
+const (
+  PrintOptionNone = 0
+)
+
+/**
+ * A single indent level
+ */
+const indentLevel = "  "
+
+/**
+ * Print state
+ */
+type printState struct {
+  depth   int
+}
+
+/**
+ * Descend
+ */
+func (s printState) Desc() printState {
+  return printState{s.depth + 1}
+}
+
+/**
+ * Indent for the current state depth
+ */
+func (s printState) Indent() string {
+  var v string
+  for i := 0; i < s.depth; i++ {
+    v += indentLevel
+  }
+  return v
+}
+
+/**
  * An executable expression
  */
 type executable interface {
   src()(span)
   exec(*Runtime, *context)(interface{}, error)
+  print(io.Writer, PrintOptions, printState)(error)
 }
 
 /**
@@ -181,6 +238,13 @@ func (n *node) exec(runtime *Runtime, context *context) (interface{}, error) {
 }
 
 /**
+ * Print
+ */
+func (n *node) print(w io.Writer, opts PrintOptions, state printState) error {
+  return fmt.Errorf("No implementation")
+}
+
+/**
  * A program
  */
 type Program struct {
@@ -192,6 +256,13 @@ type Program struct {
  */
 func (p *Program) Exec(context interface{}) (interface{}, error) {
   return p.root.exec(&Runtime{os.Stdout}, newContext(map[string]interface{}{"env": environment{}}, context))
+}
+
+/**
+ * Print
+ */
+func (p *Program) Print(w io.Writer, opts PrintOptions) error {
+  return p.root.print(w, opts, printState{})
 }
 
 /**
@@ -240,6 +311,34 @@ func (n *logicalOrNode) exec(runtime *Runtime, context *context) (interface{}, e
 }
 
 /**
+ * Print
+ */
+func (n *logicalOrNode) print(w io.Writer, opts PrintOptions, state printState) error {
+  indent := state.Indent()
+  
+  _, err := w.Write([]byte(indent + fmt.Sprintf("%T (\n", n)))
+  if err != nil {
+    return err
+  }
+  
+  n.left.print(w, opts, state.Desc())
+  
+  _, err = w.Write([]byte("\n"+ indent +"||\n"))
+  if err != nil {
+    return err
+  }
+  
+  n.right.print(w, opts, state.Desc())
+  
+  _, err = w.Write([]byte("\n"+ indent +")\n"))
+  if err != nil {
+    return err
+  }
+  
+  return nil
+}
+
+/**
  * A logical AND node
  */
 type logicalAndNode struct {
@@ -275,6 +374,34 @@ func (n *logicalAndNode) exec(runtime *Runtime, context *context) (interface{}, 
   }
   
   return rv, nil
+}
+
+/**
+ * Print
+ */
+func (n *logicalAndNode) print(w io.Writer, opts PrintOptions, state printState) error {
+  indent := state.Indent()
+  
+  _, err := w.Write([]byte(indent + fmt.Sprintf("%T (\n", n)))
+  if err != nil {
+    return err
+  }
+  
+  n.left.print(w, opts, state.Desc())
+  
+  _, err = w.Write([]byte("\n"+ indent +"&&\n"))
+  if err != nil {
+    return err
+  }
+  
+  n.right.print(w, opts, state.Desc())
+  
+  _, err = w.Write([]byte("\n"+ indent +")\n"))
+  if err != nil {
+    return err
+  }
+  
+  return nil
 }
 
 /**
@@ -324,6 +451,50 @@ func (n *arithmeticNode) exec(runtime *Runtime, context *context) (interface{}, 
       return nil, fmt.Errorf("Invalid operator: %v", n.op)
   }
   
+}
+
+/**
+ * Print
+ */
+func (n *arithmeticNode) print(w io.Writer, opts PrintOptions, state printState) error {
+  indent := state.Indent()
+  
+  _, err := w.Write([]byte(indent + fmt.Sprintf("%T (\n", n)))
+  if err != nil {
+    return err
+  }
+  
+  n.left.print(w, opts, state.Desc())
+  
+  var op string
+  switch n.op.which {
+    case tokenAdd:
+      op = "+"
+    case tokenSub:
+      op = "-"
+    case tokenMul:
+      op = "*"
+    case tokenDiv:
+      op = "/"
+    case tokenMod:
+      op = "%"
+    default:
+      return fmt.Errorf("Invalid operator: %v", n.op)
+  }
+  
+  _, err = w.Write([]byte("\n"+ indent + op +"\n"))
+  if err != nil {
+    return err
+  }
+  
+  n.right.print(w, opts, state.Desc())
+  
+  _, err = w.Write([]byte("\n"+ indent +")\n"))
+  if err != nil {
+    return err
+  }
+  
+  return nil
 }
 
 /**
@@ -381,6 +552,48 @@ func (n *relationalNode) exec(runtime *Runtime, context *context) (interface{}, 
 }
 
 /**
+ * Print
+ */
+func (n *relationalNode) print(w io.Writer, opts PrintOptions, state printState) error {
+  indent := state.Indent()
+  
+  _, err := w.Write([]byte(indent + fmt.Sprintf("%T (\n", n)))
+  if err != nil {
+    return err
+  }
+  
+  n.left.print(w, opts, state.Desc())
+  
+  var op string
+  switch n.op.which {
+    case tokenLess:
+      op = "<"
+    case tokenGreater:
+      op = ">"
+    case tokenLessEqual:
+      op = "<="
+    case tokenGreaterEqual:
+      op = ">="
+    default:
+      return fmt.Errorf("Invalid operator: %v", n.op)
+  }
+  
+  _, err = w.Write([]byte("\n"+ indent + op +"\n"))
+  if err != nil {
+    return err
+  }
+  
+  n.right.print(w, opts, state.Desc())
+  
+  _, err = w.Write([]byte("\n"+ indent +")\n"))
+  if err != nil {
+    return err
+  }
+  
+  return nil
+}
+
+/**
  * A dereference expression node
  */
 type derefNode struct {
@@ -412,6 +625,34 @@ func (n *derefNode) exec(runtime *Runtime, context *context) (interface{}, error
   }
   
   return z, err
+}
+
+/**
+ * Print
+ */
+func (n *derefNode) print(w io.Writer, opts PrintOptions, state printState) error {
+  indent := state.Indent()
+  
+  _, err := w.Write([]byte(indent + fmt.Sprintf("%T (\n", n)))
+  if err != nil {
+    return err
+  }
+  
+  n.left.print(w, opts, state.Desc())
+  
+  _, err = w.Write([]byte("\n"+ indent +".\n"))
+  if err != nil {
+    return err
+  }
+  
+  n.right.print(w, opts, state.Desc())
+  
+  _, err = w.Write([]byte("\n"+ indent +")\n"))
+  if err != nil {
+    return err
+  }
+  
+  return nil
 }
 
 /**
@@ -490,6 +731,34 @@ func (n *indexNode) execMap(runtime *Runtime, context *context, val reflect.Valu
 }
 
 /**
+ * Print
+ */
+func (n *indexNode) print(w io.Writer, opts PrintOptions, state printState) error {
+  indent := state.Indent()
+  
+  _, err := w.Write([]byte(indent + fmt.Sprintf("%T (\n", n)))
+  if err != nil {
+    return err
+  }
+  
+  n.left.print(w, opts, state.Desc())
+  
+  _, err = w.Write([]byte("\n"+ indent +"[\n"))
+  if err != nil {
+    return err
+  }
+  
+  n.right.print(w, opts, state.Desc())
+  
+  _, err = w.Write([]byte("\n"+ indent +"])\n"))
+  if err != nil {
+    return err
+  }
+  
+  return nil
+}
+
+/**
  * A function invocation expression node
  */
 type invokeNode struct {
@@ -524,6 +793,56 @@ func (n *invokeNode) exec(runtime *Runtime, context *context) (interface{}, erro
 }
 
 /**
+ * Print
+ */
+func (n *invokeNode) print(w io.Writer, opts PrintOptions, state printState) error {
+  indent := state.Indent()
+  
+  _, err := w.Write([]byte(indent + fmt.Sprintf("%T (\n", n)))
+  if err != nil {
+    return err
+  }
+  
+  if(n.left != nil){
+    n.left.print(w, opts, state.Desc())
+  }else{
+    _, err = w.Write([]byte("\n"+ indent + indentLevel +"<nil>\n"))
+    if err != nil {
+      return err
+    }
+  }
+  
+  _, err = w.Write([]byte("\n"+ indent +".\n"))
+  if err != nil {
+    return err
+  }
+  
+  n.right.print(w, opts, state.Desc())
+  
+  _, err = w.Write([]byte("\n"+ indent +"(\n"))
+  if err != nil {
+    return err
+  }
+  
+  for i, p := range n.params {
+    if i > 0 {
+      _, err = w.Write([]byte(indent +",\n"))
+      if err != nil {
+        return err
+      }
+    }
+    p.print(w, opts, state.Desc())
+  }
+  
+  _, err = w.Write([]byte("\n"+ indent +"))\n"))
+  if err != nil {
+    return err
+  }
+  
+  return nil
+}
+
+/**
  * An identifier expression node
  */
 type identNode struct {
@@ -539,6 +858,17 @@ func (n *identNode) exec(runtime *Runtime, context *context) (interface{}, error
 }
 
 /**
+ * Print
+ */
+func (n *identNode) print(w io.Writer, opts PrintOptions, state printState) error {
+  _, err := w.Write([]byte(state.Indent() + "ident{"+ n.ident +"}"))
+  if err != nil {
+    return err
+  }
+  return nil
+}
+
+/**
  * A literal expression node
  */
 type literalNode struct {
@@ -551,6 +881,17 @@ type literalNode struct {
  */
 func (n *literalNode) exec(runtime *Runtime, context *context) (interface{}, error) {
   return n.value, nil
+}
+
+/**
+ * Print
+ */
+func (n *literalNode) print(w io.Writer, opts PrintOptions, state printState) error {
+  _, err := w.Write([]byte(state.Indent() + fmt.Sprintf("literal{%v}", n.value)))
+  if err != nil {
+    return err
+  }
+  return nil
 }
 
 /**
@@ -599,7 +940,6 @@ func asNumberValue(s span, v reflect.Value) (float64, error) {
  * Invoke a function
  */
 func invokeFunction(runtime *Runtime, context *context, s span, liv interface{}, name string, ins []executable) (interface{}, error) {
-  var err error
   
   var f reflect.Value
   if liv != nil {
@@ -609,15 +949,16 @@ func invokeFunction(runtime *Runtime, context *context, s span, liv interface{},
       return nil, runtimeErrorf(s, "No such method '%v' for type %v or method is not exported", name, lrv.Type())
     }
   }else{
-    liv, err = context.get(runtime, s, name)
-    if err != nil {
-      return nil, err
+    var err error
+    liv, err = context.value(runtime, s, name)
+    if err == undefinedVariableError {
+      return nil, undefinedVariableError
     }else if liv == nil {
       return nil, runtimeErrorf(s, "No such function '%v'", name)
     }
     f = reflect.ValueOf(liv)
     if f.Kind() != reflect.Func {
-      return nil, runtimeErrorf(s, "Variable '%v' is not a function", name)
+      return nil, runtimeErrorf(s, "Variable '%v' (%T) is not a function", name, displayType(f))
     }
   }
   
@@ -667,7 +1008,7 @@ func invokeFunction(runtime *Runtime, context *context, s span, liv interface{},
   
   r := f.Call(args)
   if r == nil {
-    return nil, runtimeErrorf(s, "Function %v did not return a value", name)
+    return nil, nil
   }else if l := len(r); l > 2 {
     return nil, runtimeErrorf(s, "Function %v must return either (void), (interface{}) or (interface{}, error)", name)
   }else if l == 0 {
@@ -698,9 +1039,19 @@ func invokeFunction(runtime *Runtime, context *context, s span, liv interface{},
 }
 
 /**
+ * Dereference options
+ */
+type derefOptions int
+const (
+  derefOptionNone           = derefOptions(0)
+  derefOptionDerefFunctions = derefOptions(1 << 0)
+)
+
+
+/**
  * Dereference
  */
-func derefProp(runtime *Runtime, context *context, s span, val interface{}, ident string) (interface{}, error) {
+func derefProp(runtime *Runtime, context *context, s span, val interface{}, ident string, opts derefOptions) (interface{}, error) {
   
   switch v := val.(type) {
     case Context:
@@ -722,7 +1073,7 @@ func derefProp(runtime *Runtime, context *context, s span, val interface{}, iden
     case reflect.Map:
       return derefMap(s, v, ident)
     case reflect.Ptr, reflect.Struct:
-      return derefMember(runtime, context, s, val, ident)
+      return derefMember(runtime, context, s, val, ident, opts)
     default:
       return nil, runtimeErrorf(s, "Cannot dereference variable: %v", displayType(v))
   }
@@ -750,7 +1101,7 @@ func derefMap(s span, val reflect.Value, property string) (interface{}, error) {
 /**
  * Execute
  */
-func derefMember(runtime *Runtime, context *context, s span, val interface{}, property string) (interface{}, error) {
+func derefMember(runtime *Runtime, context *context, s span, val interface{}, property string, opts derefOptions) (interface{}, error) {
   raw  := reflect.ValueOf(val)
   base := raw
   
@@ -763,14 +1114,28 @@ func derefMember(runtime *Runtime, context *context, s span, val interface{}, pr
   
   v := raw.MethodByName(property)
   if v.IsValid() {
-    if n := v.Type().NumOut(); n < 1 {
-      return nil, runtimeErrorf(s, "Method %v of %v returns no values, which makes no sense in this context (expected: >0)", v, displayType(base))
+    if (opts & derefOptionDerefFunctions) == derefOptionDerefFunctions {
+      f := v.Type()
+      if n := f.NumOut(); n < 1 {
+        return nil, runtimeErrorf(s, "Method %v of %v returns no values, which cannot be used as a dereference", v, displayType(base))
+      }
+      if f.Out(0) == typeOfError {
+        return nil, runtimeErrorf(s, "Method %v of %v returns only an error, which cannot be used as a dereference", v, displayType(base))
+      }
+      return invokeFunction(runtime, context, s, val, property, nil)
+    }else{
+      if !v.CanInterface() {
+        return nil, runtimeErrorf(s, "Cannot access %v of %v", property, displayType(raw))
+      }
+      return v.Interface(), nil
     }
-    return invokeFunction(runtime, context, s, val, property, nil)
   }
   
   v = base.FieldByName(property)
   if v.IsValid() {
+    if !v.CanInterface() {
+      return nil, runtimeErrorf(s, "Cannot access %v of %v", property, displayType(raw))
+    }
     return v.Interface(), nil
   }
   

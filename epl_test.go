@@ -50,6 +50,16 @@ type SomeContext struct {
   BoolField     bool
 }
 
+func (c *SomeContext) ErrorMethod() error {
+  return nil
+}
+
+func (c *SomeContext) NoReturnValueMethod() {}
+
+func (c *SomeContext) ReturnParamValueMethod(v interface{}) interface{} {
+  return v
+}
+
 func (c *SomeContext) StringFieldMethod() string {
   return c.StringField
 }
@@ -248,6 +258,14 @@ func TestParse(t *testing.T) {
   parseAndRun(t, `MissingFieldMethod`, &SomeContext{StringField:"Hello, there"}, testRuntimeError)
   parseAndRun(t, `RecursiveFieldMethod.MissingMethod`, &SomeContext{StringField:"Hello, there"}, testRuntimeError)
   
+  // method incorrectly used as variable
+  parseAndRun(t, `ErrorMethod`, &SomeContext{}, testRuntimeError)
+  parseAndRun(t, `NoReturnValueMethod`, &SomeContext{}, testRuntimeError)
+  
+  // function invocation
+  parseAndRun(t, `NoReturnValueMethod()`, &SomeContext{}, nil)
+  parseAndRun(t, `ReturnParamValueMethod(123.456)`, &SomeContext{}, 123.456)
+  
   // variables using the environment
   os.Setenv("TEST_ENV_VARIABLE", "This is the value")
   parseAndRun(t, `env.TEST_ENV_VARIABLE`, &SomeContext{StringField:"Hello, there"}, "This is the value")
@@ -318,6 +336,8 @@ func parseAndRun(t *testing.T, source string, context interface{}, result interf
       return
     }
   }
+  
+  x.Print(os.Stdout, 0)
   
   y, err := x.Exec(context)
   if err != nil {
