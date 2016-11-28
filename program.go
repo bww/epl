@@ -668,7 +668,7 @@ type indexNode struct {
  */
 func (n *indexNode) exec(runtime *Runtime, context *context) (interface{}, error) {
   
-  val, err := n.left.exec(runtime, context)
+  left, err := n.left.exec(runtime, context)
   if err != nil {
     return nil, err
   }
@@ -678,26 +678,46 @@ func (n *indexNode) exec(runtime *Runtime, context *context) (interface{}, error
     return nil, err
   }
   
-  prop := reflect.ValueOf(sub)
-  if prop.Kind() == reflect.Invalid {
+  val := reflect.ValueOf(sub)
+  if val.Kind() == reflect.Invalid {
     return nil, runtimeErrorf(n.right.src(), "Subscript expression is nil")
   }
   
-  context.push(val)
+  context.push(left)
   defer context.pop()
   
-  deref, _ := derefValue(reflect.ValueOf(val))
+  deref, _ := derefValue(reflect.ValueOf(left))
   switch deref.Kind() {
+    case reflect.String:
+      return n.execString(runtime, context, deref, val)
     case reflect.Array:
-      return n.execArray(runtime, context, deref, prop)
+      return n.execArray(runtime, context, deref, val)
     case reflect.Slice:
-      return n.execArray(runtime, context, deref, prop)
+      return n.execArray(runtime, context, deref, val)
     case reflect.Map:
-      return n.execMap(runtime, context, deref, prop)
+      return n.execMap(runtime, context, deref, val)
     default:
       return nil, runtimeErrorf(n.span, "Expression result is not indexable: %v", displayType(deref))
   }
   
+}
+
+/**
+ * Execute
+ */
+func (n *indexNode) execString(runtime *Runtime, context *context, val reflect.Value, index reflect.Value) (interface{}, error) {
+  
+  i, err := asNumberValue(n.right.src(), index)
+  if err != nil {
+    return nil, err
+  }
+  
+  l := val.Len()
+  if int(i) < 0 || int(i) >= l {
+    return nil, runtimeErrorf(n.span, "Index out-of-bounds: %v", i)
+  }
+  
+  return string(val.Index(int(i)).Interface().(uint8)), nil
 }
 
 /**

@@ -250,6 +250,10 @@ func TestParse(t *testing.T) {
   parseAndRun(t, `foo.arr[1]`, nil, "One")
   parseAndRun(t, `foo["arr"][2]`, nil, "Two")
   
+  // variables using a string subscript operator
+  parseAndRun(t, `"hello"[(0)]`, nil, "h")
+  parseAndRun(t, `foo.bat[0]`, nil, "T")
+  
   // variables using a struct context
   parseAndRun(t, `StringField`, &SomeContext{StringField:"Hello, there"}, "Hello, there")
   parseAndRun(t, `StringFieldMethod`, &SomeContext{StringField:"Hello, there"}, "Hello, there")
