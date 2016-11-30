@@ -199,6 +199,52 @@ type executable interface {
 }
 
 /**
+ * Variable arguments
+ */
+type varargs []executable
+
+/**
+ * Obtain the node src span
+ */
+func (n varargs) src() span {
+  if l := len(n); l > 1 {
+    return encompass(n[0].src(), n[l-1].src())
+  }else if l > 0 {
+    return n[0].src()
+  }else{
+    return span{}
+  }
+}
+
+/**
+ * Execute
+ */
+func (n varargs) exec(runtime *Runtime, context *context) (interface{}, error) {
+  args := make([]interface{}, len(n))
+  for i, e := range n {
+    v, err := e.exec(runtime, context)
+    if err != nil {
+      return nil, err
+    }
+    args[i] = v
+  }
+  return args, nil
+}
+
+/**
+ * Print
+ */
+func (n varargs) print(w io.Writer, opts PrintOptions, state printState) error {
+  for _, e := range n {
+    err := e.print(w, opts, state)
+    if err != nil {
+      return err
+    }
+  }
+  return nil
+}
+ 
+/**
  * An AST node
  */
 type node struct {
@@ -865,7 +911,7 @@ func (n *identNode) exec(runtime *Runtime, context *context) (interface{}, error
  * Print
  */
 func (n *identNode) print(w io.Writer, opts PrintOptions, state printState) error {
-  _, err := w.Write([]byte(state.Indent() + "ident{"+ n.ident +"}"))
+  _, err := w.Write([]byte(state.Indent() + "ident:"+ n.ident))
   if err != nil {
     return err
   }
@@ -891,7 +937,7 @@ func (n *literalNode) exec(runtime *Runtime, context *context) (interface{}, err
  * Print
  */
 func (n *literalNode) print(w io.Writer, opts PrintOptions, state printState) error {
-  _, err := w.Write([]byte(state.Indent() + fmt.Sprintf("literal{%v}", n.value)))
+  _, err := w.Write([]byte(state.Indent() + fmt.Sprintf("literal<%T>:%v", n.value, n.value)))
   if err != nil {
     return err
   }
@@ -977,6 +1023,22 @@ func invokeFunction(runtime *Runtime, context *context, s span, liv interface{},
   in, extra := 0, 1
   args := make([]reflect.Value, 0)
   cin := ft.NumIn()
+  
+  if ft.IsVariadic() {
+    off := 0
+    if ft.In(in) == typeOfState {
+      off++
+    }
+    if lp < cin - off - 1 {
+      return nil, runtimeErrorf(s, "Function %v takes %v arguments but is given %v", name, cin - off - 1, lp)
+    }
+    vargs := ins[cin - off - 1:]
+    vatmp := make([]executable, len(ins) - len(vargs))
+    copy(vatmp, ins[:cin - off - 1])
+    ins = append(vatmp, varargs(vargs))
+    lp  = len(ins)
+  }
+  
   if cin != lp {
     if cin - extra != lp /* allow for runtime parameter */ {
       return nil, runtimeErrorf(s, "Function %v takes %v arguments but is given %v", name, cin, lp)
@@ -1010,7 +1072,12 @@ func invokeFunction(runtime *Runtime, context *context, s span, liv interface{},
     in++
   }
   
-  r := f.Call(args)
+  var r []reflect.Value
+  if ft.IsVariadic() {
+    r = f.CallSlice(args)
+  }else{
+    r = f.Call(args)
+  }
   if r == nil {
     return nil, nil
   }else if l := len(r); l > 2 {

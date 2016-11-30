@@ -61,6 +61,7 @@ var stdlib = map[string]interface{}{
   "env": environment{},
   "len": builtInLen,
   "match": builtInMatch,
+  "printf": builtInPrintf,
 }
 
 /**
@@ -89,4 +90,17 @@ func builtInMatch(e, v interface{}) (bool, error) {
     return false, fmt.Errorf("Invalid parameter to: match(string, string)")
   }
   return regexp.MatchString(se, sv)
+}
+
+/**
+ * Print and return true
+ */
+func builtInPrintf(s *State, f interface{}, a ...interface{}) (bool, error) {
+  var sf string
+  var ok bool
+  if sf, ok = f.(string); !ok {
+    return false, fmt.Errorf("Invalid parameter to: printf(string, ...<any>)")
+  }
+  fmt.Fprintf(s.Runtime.Stdout, sf +"\n", a...)
+  return true, nil
 }

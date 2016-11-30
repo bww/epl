@@ -302,6 +302,8 @@ func TestParse(t *testing.T) {
   parseAndRun(t, `len(fix)`, nil, 3)
   parseAndRun(t, `match("[h|H]el+o", "Hello")`, nil, true)
   parseAndRun(t, `match("[h|H]el+o", 123)`, nil, testRuntimeError)
+  parseAndRun(t, `printf("Print this, please: %s", StringField)`, &SomeContext{StringField:"Hello, there"}, true)
+  parseAndRun(t, `printf("Print this, please")`, &SomeContext{StringField:"Hello, there"}, true)
   
   // parseAndRun(t, `num == 3`, nil, nil)
   // parseAndRun(t, `num > 3`, nil, nil)
