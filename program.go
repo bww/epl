@@ -34,6 +34,7 @@ import (
   "os"
   "io"
   "fmt"
+  "bytes"
   "reflect"
 )
 
@@ -772,7 +773,9 @@ func (n *indexNode) execArray(runtime *Runtime, context *context, val reflect.Va
 func (n *indexNode) execMap(runtime *Runtime, context *context, val reflect.Value, key reflect.Value) (interface{}, error) {
   
   if !key.Type().AssignableTo(val.Type().Key()) {
-    return nil, runtimeErrorf(n.span, "Expression result is not assignable to map key type: %v != %v for %v -> %v", key.Type(), val.Type().Key(), val.Type(), val.Interface())
+    b := &bytes.Buffer{}
+    context.top().(executable).print(b, 0, printState{})
+    return nil, runtimeErrorf(n.span, "Expression result is not assignable to map key type: %v != %v for %v -> %v", key.Type(), val.Type().Key(), val.Type(), string(b.Bytes())) 
   }
   
   return val.MapIndex(key).Interface(), nil
