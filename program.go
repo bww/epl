@@ -297,7 +297,7 @@ func (p *Program) Print(w io.Writer, opts PrintOptions) error {
 
 // Display as source
 func (p *Program) String() string {
-  var b bytes.Buffer
+  b := &bytes.Buffer{}
   p.root.print(b, 0, printState{})
   return string(b.Bytes())
 }
