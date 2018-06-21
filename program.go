@@ -34,6 +34,7 @@ import (
   "os"
   "io"
   "fmt"
+  "bytes"
   "reflect"
 )
 
@@ -292,6 +293,13 @@ func (p *Program) Exec(context interface{}) (interface{}, error) {
  */
 func (p *Program) Print(w io.Writer, opts PrintOptions) error {
   return p.root.print(w, opts, printState{})
+}
+
+// Display as source
+func (p *Program) String() string {
+  var b bytes.Buffer
+  p.root.print(b, 0, printState{})
+  return string(b.Bytes())
 }
 
 /**
