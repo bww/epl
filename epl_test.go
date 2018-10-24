@@ -167,6 +167,10 @@ func TestParse(t *testing.T) {
   parseAndRun(t, `false`, nil, false)
   parseAndRun(t, `"abcdef"`, nil, "abcdef")
   
+  // nil interface handling
+  parseAndRun(t, `ptr == nil`, map[string]interface{}{"ptr": []string(nil)}, true)
+  parseAndRun(t, `ptr != nil`, map[string]interface{}{"ptr": []string(nil)}, false)
+  
   // weird but valid
   parseAndRun(t, `("abcdef")`, nil, "abcdef")
   parseAndRun(t, `((-5))`, nil, float64(-5))
@@ -356,6 +360,7 @@ func parseAndRun(t *testing.T, source string, context interface{}, result interf
   }
   
   x.Print(os.Stdout, 0)
+  fmt.Println()
   
   y, err := x.Exec(context)
   if err != nil {

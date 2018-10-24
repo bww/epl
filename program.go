@@ -543,6 +543,29 @@ type relationalNode struct {
   left, right executable
 }
 
+// Equality with support for nil interfaces
+func equal(a, b interface{}) bool {
+  var anil, bnil bool
+  va, vb := reflect.ValueOf(a), reflect.ValueOf(b)
+  switch va.Kind() {
+    case reflect.Invalid:
+      anil = true
+    case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice:
+      anil = va.IsNil()
+  }
+  switch vb.Kind() {
+    case reflect.Invalid:
+      bnil = true
+    case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice:
+      bnil = vb.IsNil()
+  }
+  if anil == true && bnil == true {
+    return true
+  }else{
+    return a == b
+  }
+}
+  
 /**
  * Execute
  */
@@ -559,9 +582,10 @@ func (n *relationalNode) exec(runtime *Runtime, context *context) (interface{}, 
   
   switch n.op.which {
     case tokenEqual:
-      return lvi == rvi, nil
+      // return lvi == rvi, nil
+      return equal(lvi, rvi), nil
     case tokenNotEqual:
-      return lvi != rvi, nil
+      return !equal(lvi, rvi), nil
   }
   
   lv, err := asNumber(n.left.src(), lvi)
