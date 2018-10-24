@@ -582,7 +582,6 @@ func (n *relationalNode) exec(runtime *Runtime, context *context) (interface{}, 
   
   switch n.op.which {
     case tokenEqual:
-      // return lvi == rvi, nil
       return equal(lvi, rvi), nil
     case tokenNotEqual:
       return !equal(lvi, rvi), nil
