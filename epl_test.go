@@ -171,6 +171,15 @@ func TestParse(t *testing.T) {
   parseAndRun(t, `ptr == nil`, map[string]interface{}{"ptr": []string(nil)}, true)
   parseAndRun(t, `ptr != nil`, map[string]interface{}{"ptr": []string(nil)}, false)
   
+  // numeric types
+  parseAndRun(t, `A == 0`, struct{A int}{}, true)
+  parseAndRun(t, `A == 0`, struct{A int32}{}, true)
+  parseAndRun(t, `A == 0`, struct{A int64}{}, true)
+  parseAndRun(t, `A == 0`, struct{A uint32}{}, true)
+  parseAndRun(t, `A == 0`, struct{A uint64}{}, true)
+  parseAndRun(t, `A == 0`, struct{A float32}{}, true)
+  parseAndRun(t, `A == 0`, struct{A float64}{}, true)
+  
   // weird but valid
   parseAndRun(t, `("abcdef")`, nil, "abcdef")
   parseAndRun(t, `((-5))`, nil, float64(-5))

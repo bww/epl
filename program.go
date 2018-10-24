@@ -561,11 +561,44 @@ func equal(a, b interface{}) bool {
   }
   if anil == true && bnil == true {
     return true
-  }else{
-    return a == b
+  }
+  switch va.Kind() {
+    case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+      return equalNumeric(va, vb)
+    case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+      return equalNumeric(va, vb)
+    case reflect.Float32, reflect.Float64:
+      return equalNumeric(va, vb)
+    default:
+      return a == b
   }
 }
-  
+
+func equalNumeric(va, vb reflect.Value) bool {
+  var na, nb float64
+  switch va.Kind() {
+    case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+      na = float64(va.Int())
+    case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+      na = float64(va.Uint())
+    case reflect.Float32, reflect.Float64:
+      na = va.Float()
+    default:
+      return false
+  }
+  switch vb.Kind() {
+    case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+      nb = float64(vb.Int())
+    case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+      nb = float64(vb.Uint())
+    case reflect.Float32, reflect.Float64:
+      nb = vb.Float()
+    default:
+      return false
+  }
+  return na == nb
+}
+
 /**
  * Execute
  */
