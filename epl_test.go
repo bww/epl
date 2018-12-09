@@ -33,6 +33,7 @@ package epl
 import (
   "os"
   "fmt"
+  "time"
   "testing"
 )
 
@@ -149,6 +150,7 @@ func compileAndValidate(test *testing.T, source string, expect []token) {
 }
 
 func TestParse(t *testing.T) {
+  now := time.Now()
   
   // basic
   parseAndRun(t, `nil`, nil, nil)
@@ -179,6 +181,11 @@ func TestParse(t *testing.T) {
   parseAndRun(t, `A == 0`, struct{A uint64}{}, true)
   parseAndRun(t, `A == 0`, struct{A float32}{}, true)
   parseAndRun(t, `A == 0`, struct{A float64}{}, true)
+  
+  // time
+  parseAndRun(t, `A == Now`, struct{A, Now time.Time}{now, now}, true)
+  parseAndRun(t, `A == Now`, struct{A, Now time.Time}{now, time.Now()}, false)
+  parseAndRun(t, `A != Now`, struct{A, Now time.Time}{now, now}, false)
   
   // weird but valid
   parseAndRun(t, `("abcdef")`, nil, "abcdef")
