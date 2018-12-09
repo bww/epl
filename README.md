@@ -142,7 +142,7 @@ A few builtin functions are provided in the standard library. They are aimed at 
 
 | Function | Detail |
 |----------|--------|
-| `len(v)` | Determine the length of an array, slice, or map, `v`. Providing any other type as an argument will produce an error. ` |
+| `len(v)` | Determine the length of an array, slice, or map, `v`. Providing any other type as an argument will produce an error. |
 | `match(e, v)` | Match the regular expression `e` in the text `v`. If a match is found, `true` is returned, otherwise `false`. |
 | `printf(...v)` | Print to standard output. This method has the same semantics as `fmt.Printf`. |
 
