@@ -250,8 +250,8 @@ func TestParse(t *testing.T) {
 	parseAndRun(t, `"Hello" +" "+ "world"`, nil, "Hello world")
 
 	// invalid string an numeric mixing
-	// TODO: make negative case tests work...
-	// parseAndRun(t, `"A" + 100`, nil, nil)
+	parseAndRun(t, `"A" + 100`, nil, testRuntimeError)
+	parseAndRun(t, `100 + "A"`, nil, testRuntimeError)
 
 	// order of operations
 	parseAndRun(t, `10 * 2 - 1`, nil, float64(19))
