@@ -240,6 +240,19 @@ func TestParse(t *testing.T) {
 	parseAndRun(t, `10 * 2`, nil, float64(20))
 	parseAndRun(t, `10 % 3`, nil, int64(1))
 
+	// string concatenation
+	parseAndRun(t, `"A" + "B"`, nil, "AB")
+	parseAndRun(t, `"A" + "B" + "C"`, nil, "ABC")
+	parseAndRun(t, `"A" + "" + ""`, nil, "A")
+	parseAndRun(t, `"" + "B" + ""`, nil, "B")
+	parseAndRun(t, `"" + "" + "C"`, nil, "C")
+	parseAndRun(t, `"" + "" + ""`, nil, "")
+	parseAndRun(t, `"Hello" +" "+ "world"`, nil, "Hello world")
+
+	// invalid string an numeric mixing
+	parseAndRun(t, `"A" + 100`, nil, testRuntimeError)
+	parseAndRun(t, `100 + "A"`, nil, testRuntimeError)
+
 	// order of operations
 	parseAndRun(t, `10 * 2 - 1`, nil, float64(19))
 	parseAndRun(t, `10 / 2 - 1`, nil, float64(4))
