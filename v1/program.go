@@ -1123,7 +1123,7 @@ func invokeFunction(runtime *Runtime, context *context, s span, liv interface{},
 			off++
 		}
 		if lp < cin-off-1 {
-			return nil, runtimeErrorf(s, "Function %v takes %v arguments but is given %v", name, cin-off-1, lp)
+			return nil, runtimeErrorf(s, "Variadic function takes %v arguments but is given %v: %s([%v,] %s)", cin-off-1, lp, name, typeOfState, formatArgs(ins))
 		}
 		vargs := ins[cin-off-1:]
 		vatmp := make([]executable, len(ins)-len(vargs))
@@ -1134,10 +1134,10 @@ func invokeFunction(runtime *Runtime, context *context, s span, liv interface{},
 
 	if cin != lp {
 		if cin-extra != lp /* allow for runtime parameter */ {
-			return nil, runtimeErrorf(s, "Function %v takes %v arguments but is given %v", name, cin, lp)
+			return nil, runtimeErrorf(s, "Function takes %v arguments but is given %v: %s([%v,] %s)", cin, lp, name, typeOfState, formatArgs(ins))
 		}
 		if ft.In(in) != typeOfState {
-			return nil, runtimeErrorf(s, "Function %v takes %v arguments but is given %v; first native argument must receive %v", name, cin-extra, lp, typeOfState)
+			return nil, runtimeErrorf(s, "Function takes %v arguments but is given %v: %s([%v,] %s)", cin, lp, name, typeOfState, formatArgs(ins))
 		}
 		args = append(args, reflect.ValueOf(&State{runtime, context}))
 		in++
