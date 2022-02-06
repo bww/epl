@@ -148,8 +148,8 @@ type State struct {
 	Context interface{}
 }
 
-var typeOfState = reflect.TypeOf(&State{})
-var typeOfRuntime = reflect.TypeOf(&Runtime{})
+var typeOfState = reflect.TypeOf((*State)(nil))
+var typeOfRuntime = reflect.TypeOf((*Runtime)(nil))
 var typeOfError = reflect.TypeOf((*error)(nil)).Elem()
 
 /**

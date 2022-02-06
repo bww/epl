@@ -341,15 +341,15 @@ func TestParse(t *testing.T) {
 	parseAndRun(t, `printf("Print this, please: %s", StringField)`, &SomeContext{StringField: "Hello, there"}, true)
 	parseAndRun(t, `printf("Print this, please")`, &SomeContext{StringField: "Hello, there"}, true)
 
-	// parseAndRun(t, `num == 3`, nil, nil)
-	// parseAndRun(t, `num > 3`, nil, nil)
-	// parseAndRun(t, `num < 4 || 1 + 2 < 5`, nil, nil)
-	// parseAndRun(t, `"foo" > 3`, nil, nil)
+	parseAndRun(t, `num == 3`, nil, false)
+	parseAndRun(t, `num > 3`, nil, true)
+	parseAndRun(t, `num < 4 || 1 + 2 < 5`, nil, true)
+	parseAndRun(t, `"foo" > 3`, nil, testRuntimeError)
 
 	// misc
-	parseAndRun(t, `"`, nil, true)
-	parseAndRun(t, `1"`, nil, true)
-	parseAndRun(t, `hello"`, nil, true)
+	parseAndRun(t, `"`, nil, testCompileError)
+	parseAndRun(t, `1"`, nil, testCompileError)
+	parseAndRun(t, `hello"`, nil, testCompileError)
 
 }
 
