@@ -859,7 +859,12 @@ func (n *indexNode) execMap(runtime *Runtime, context *context, val reflect.Valu
 		return nil, runtimeErrorf(n.span, "Expression result is not assignable to map key type: %v != %v", key.Type(), val.Type().Key())
 	}
 
-	return val.MapIndex(key).Interface(), nil
+	val = val.MapIndex(key)
+	if val.IsZero() { // zero value cannot use Interface()
+		return nil, nil
+	}
+
+	return val.Interface(), nil
 }
 
 /**
