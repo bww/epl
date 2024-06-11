@@ -780,7 +780,6 @@ type indexNode struct {
  * Execute
  */
 func (n *indexNode) exec(runtime *Runtime, context *context) (interface{}, error) {
-
 	left, err := n.left.exec(runtime, context)
 	if err != nil {
 		return nil, err
@@ -810,7 +809,6 @@ func (n *indexNode) exec(runtime *Runtime, context *context) (interface{}, error
 	default:
 		return nil, runtimeErrorf(n.span, "Expression result is not indexable: %v", displayType(deref))
 	}
-
 }
 
 /**
@@ -854,17 +852,15 @@ func (n *indexNode) execArray(runtime *Runtime, context *context, val reflect.Va
  * Execute
  */
 func (n *indexNode) execMap(runtime *Runtime, context *context, val reflect.Value, key reflect.Value) (interface{}, error) {
-
 	if !key.Type().AssignableTo(val.Type().Key()) {
 		return nil, runtimeErrorf(n.span, "Expression result is not assignable to map key type: %v != %v", key.Type(), val.Type().Key())
 	}
-
 	val = val.MapIndex(key)
-	if val.IsZero() { // zero value cannot use Interface()
-		return nil, nil
+	if !val.IsZero() && val.IsValid() {
+		return val.Interface(), nil
+	} else {
+		return nil, undefinedVariableError
 	}
-
-	return val.Interface(), nil
 }
 
 /**
@@ -1254,13 +1250,11 @@ func derefProp(runtime *Runtime, context *context, s span, val interface{}, iden
  */
 func derefMap(s span, val reflect.Value, property string) (interface{}, error) {
 	key := reflect.ValueOf(property)
-
 	if !key.Type().AssignableTo(val.Type().Key()) {
 		return nil, runtimeErrorf(s, "Expression result is not assignable to map key type: %v != %v", key.Type(), val.Type().Key())
 	}
-
 	res := val.MapIndex(key)
-	if res.IsValid() {
+	if !res.IsZero() && res.IsValid() {
 		return res.Interface(), nil
 	} else {
 		return nil, undefinedVariableError
