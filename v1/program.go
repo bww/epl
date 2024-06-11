@@ -856,7 +856,7 @@ func (n *indexNode) execMap(runtime *Runtime, context *context, val reflect.Valu
 		return nil, runtimeErrorf(n.span, "Expression result is not assignable to map key type: %v != %v", key.Type(), val.Type().Key())
 	}
 	val = val.MapIndex(key)
-	if !val.IsZero() && val.IsValid() {
+	if val.IsValid() && !val.IsZero() {
 		return val.Interface(), nil
 	} else {
 		return nil, undefinedVariableError
@@ -1254,7 +1254,7 @@ func derefMap(s span, val reflect.Value, property string) (interface{}, error) {
 		return nil, runtimeErrorf(s, "Expression result is not assignable to map key type: %v != %v", key.Type(), val.Type().Key())
 	}
 	res := val.MapIndex(key)
-	if !res.IsZero() && res.IsValid() {
+	if res.IsValid() && !res.IsZero() {
 		return res.Interface(), nil
 	} else {
 		return nil, undefinedVariableError
